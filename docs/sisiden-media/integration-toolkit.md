@@ -50,7 +50,7 @@ scripts/
   media_validate.py              検証・グラフ集計
   media_export.py                各種エクスポート
   media_serve.py                 配信API起動
-tests/test_media.py              18件のテスト
+tests/test_media.py              19件のテスト
 ```
 
 追加の依存パッケージはない（PyYAMLのみ。既存の `requirements.txt` で足りる）。
@@ -91,11 +91,13 @@ python scripts/media_validate.py
 ### STUDIO CMS 設定チェックシート
 
 ```bash
-python scripts/media_export.py --format setup
+python scripts/media_export.py --format setup-minimal   # 初日に作る分だけ（4モデル・48項目）
+python scripts/media_export.py --format setup           # 全体（8モデル・150項目以上）
 ```
 
-`data/media_export/studio_cms_setup.csv` に、STUDIOの編集画面で
-プロパティを1つずつ作るためのシートが出る。
+`data/media_export/` に、STUDIOの編集画面でプロパティを1つずつ作るためのシートが出る。
+**最初は `setup-minimal` を使う。**STUDIOはプロパティを後から追加できるため、
+初日に全項目を作る必要はない（[STEP 11](./11-cms-quickstart.md)）。
 
 ```
 モデル,プロパティ名,表示ラベル,STUDIOで選ぶタイプ,参照先モデル,選択形式,必須,選択肢,設定済み
