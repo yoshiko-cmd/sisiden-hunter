@@ -15,11 +15,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.collectors.kkj import collect
+from src.collectors.kkj import (
+    KkjApiError,
+    SearchCriteria,
+    build_request_params,
+    collect,
+    infer_organization_type,
+    load_config,
+    parse_response,
+)
 from src.database.db import get_connection, save_opportunity
 from src.scoring.scorer import score_opportunity
 
 FIXTURE_PATH = ROOT / "tests" / "fixtures" / "kkj_sample_response.xml"
+ERROR_FIXTURE_PATH = ROOT / "tests" / "fixtures" / "kkj_error_response.xml"
 SCHEMA_PATH = ROOT / "src" / "database" / "schema.sql"
 
 
@@ -37,6 +46,87 @@ def test_collect_fixture_returns_10_records():
     records = collect(live=False, fixture_path=FIXTURE_PATH)
     assert len(records) == 10
     assert records[0]["source_key"] == "KKJ-TEST-0001"
+
+
+def test_parses_multiple_attachments():
+    records = {r["source_key"]: r for r in collect(live=False, fixture_path=FIXTURE_PATH)}
+
+    multi = records["KKJ-TEST-0002"]
+    assert len(multi["attachment_urls"]) == 3, "<Attachments>内の複数<Attachment>を全て拾うこと"
+    assert multi["attachment_names"][0] == "公募要項"
+    assert multi["attachment_urls"][0].endswith("youkou.pdf")
+
+    # Attachmentsタグ自体が無い案件(オプション項目の欠落)
+    assert records["KKJ-TEST-0003"]["attachment_urls"] == []
+
+
+def test_optional_tags_missing_is_tolerated():
+    """オプション項目はタグ自体が出力されないことがある(APIガイド4.2)。"""
+    records = {r["source_key"]: r for r in collect(live=False, fixture_path=FIXTURE_PATH)}
+
+    national = records["KKJ-TEST-0007"]  # PrefectureName/CityName/Location無し
+    assert national["prefecture"] is None
+    assert national["municipality"] is None
+    assert national["location"] is None
+    assert national["project_name"] == "全国中小企業実態調査業務"
+
+
+def test_organization_type_inference():
+    records = {r["source_key"]: r for r in collect(live=False, fixture_path=FIXTURE_PATH)}
+
+    assert records["KKJ-TEST-0001"]["organization_type"] == "都道府県"
+    assert records["KKJ-TEST-0006"]["organization_type"] == "市区町村"
+    assert records["KKJ-TEST-0007"]["organization_type"] == "独立行政法人等"
+    assert infer_organization_type("総務省", None, None) == "国"
+
+
+def test_error_response_raises():
+    """<Results><Error>...</Error></Results> はKkjApiErrorとして扱う(APIガイド5章)。"""
+    error_xml = ERROR_FIXTURE_PATH.read_text(encoding="utf-8")
+    try:
+        parse_response(error_xml)
+    except KkjApiError as exc:
+        assert "Invalid Date Parameter" in str(exc)
+    else:
+        raise AssertionError("エラー応答でKkjApiErrorが投げられていない")
+
+
+def test_request_params_match_api_guide():
+    config = load_config()
+
+    params = build_request_params(
+        SearchCriteria(query="動画", published_from="2026-09-01", published_to="2026-09-30"), config
+    )
+    assert params["Query"] == "動画"
+    assert params["CFT_Issue_Date"] == "2026-09-01/2026-09-30"
+
+    # 「開始日/」形式(終了日なし)
+    params = build_request_params(SearchCriteria(query="映像", published_from="2026-09-01"), config)
+    assert params["CFT_Issue_Date"] == "2026-09-01/"
+
+    # 「開始終了日」形式(同日指定)
+    params = build_request_params(
+        SearchCriteria(lg_code="01", published_from="2026-09-01", published_to="2026-09-01"), config
+    )
+    assert params["CFT_Issue_Date"] == "2026-09-01"
+    assert params["LG_Code"] == "01"
+
+    # 必須パラメータ未指定はエラー
+    try:
+        build_request_params(SearchCriteria(published_from="2026-09-01"), config)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("必須パラメータ未指定でValueErrorが投げられていない")
+
+
+def test_prefecture_codes_cover_all_47():
+    config = load_config()
+    codes = config["prefecture_codes"]
+    assert len(codes) == 47
+    assert codes["01"] == "北海道"
+    assert codes["47"] == "沖縄県"
+    assert all(len(str(c)) == 2 for c in codes), "都道府県コードは先行ゼロを含む2桁"
 
 
 def test_scoring_prioritizes_documentary_over_plain_video():

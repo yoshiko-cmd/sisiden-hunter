@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS opportunities (
     -- 本文・リンク
     external_url               TEXT,
     description                 TEXT,
+    location                     TEXT,                        -- 履行場所・納入場所
+    certification                 TEXT,                        -- 参加資格(A/B/C/D等)
     attachment_urls              TEXT,                        -- JSON配列文字列
     attachment_names              TEXT,                        -- JSON配列文字列
 

@@ -9,29 +9,37 @@ MCP(Model Context Protocol)経由でChatGPT / Claude Desktop / Claude Code / Cod
 キーワードマッチとルールベーススコアリングのみで行い、高度な判断(主人公性の最終判定、
 提案戦略の検討)はMCPクライアント側の対話(人間+LLM)で行う設計です。
 
-## 重要な既知の制約(このセッションで確認した事実)
+## API仕様への準拠状況
 
-この開発環境(サンドボックス)は組織のネットワークポリシーにより、
-`kkj.go.jp` を含む一般の官公庁ドメインへのアウトバウンド接続がブロックされています
-(疎通確認の結果、プロキシから `403 Forbidden` が返ることを確認済み)。
+収集ロジックは[公式APIガイド V1.1](https://www.kkj.go.jp/doc/ja/api_guide.pdf)の実仕様に準拠しています。
 
-そのため本MVPでは:
+| 項目 | 実装内容 |
+|---|---|
+| エンドポイント | `https://www.kkj.go.jp/api/` (ガイド6.4) |
+| 必須パラメータ | `Query` / `Project_Name` / `Organization_Name` / `LG_Code` のいずれか1つ以上(AND条件) |
+| 期間パラメータ | `CFT_Issue_Date` / `Tender_Submission_Deadline` / `Opening_Tenders_Event` / `Period_End_Time`。`開始日/`・`開始日/終了日`・`開始終了日`・`/終了日` の4形式に対応(ガイド3.2) |
+| レスポンス | XML。1件 = `<SearchResult>`、一意キー = `<Key>`、添付 = `<Attachments><Attachment><Name>/<Uri>`(複数対応) |
+| オプション項目 | 該当情報が無い場合タグ自体が出力されないため、欠落を前提にパース(ガイド4.2) |
+| タグ順序 | 出現順序が不定であることを前提に、順序非依存でパース |
+| エラー応答 | `<Results><Error>...</Error></Results>` を検知して例外化(ガイド5章) |
+| 都道府県コード | 01〜47をJIS X0401準拠で `config/kkj_api.yaml` に定義(ガイド6.1) |
 
-- 収集ロジック(`src/collectors/kkj.py`)は公開情報から判明した実APIの仕様
-  (パラメータ名: `Query` / `Project_Name` / `Organization_Name` / `LG_Code`、
-  日付範囲パラメータ: `CFT_Issue_Date` / `Tender_Submission_Deadline` /
-  `Opening_Tenders_Event` / `Period_End_Time`、レスポンス形式: XML)に基づいて実装済み。
-- ただしエンドポイントの正確なパスとレスポンスXMLの要素名は
-  [公式APIガイド](https://www.kkj.go.jp/doc/ja/api_guide.pdf) 本体にアクセスできず未確認のため、
-  `config/kkj_api.yaml` に暫定値を記載し、**コードを変更せず設定ファイルのみ修正すれば
-  実際の仕様に対応できる設計**にしている。
-- パイプライン全体(収集→重複排除→スコアリング→DB保存→MCP検索)の動作確認は、
-  実レスポンスを模した10件のテスト用フィクスチャ(`tests/fixtures/kkj_sample_response.xml`、
-  架空データ)を使って行った。
+**発注機関タイプ**: APIに専用タグが無いため、`CityName`/`PrefectureName`の有無と機関名から
+都道府県 / 市区町村 / 国 / 独立行政法人等 / 公的機関を推定して保存します。
 
-ネットワーク到達可能な環境(ユーザーのPC等)では、`config/kkj_api.yaml` のURLを
-実際のAPIガイドに合わせて修正した上で `python scripts/collect.py --live` を実行すれば、
-そのまま実データ収集に切り替わります。
+**予定価格**: このAPIは金額項目を返しません(公告文PDFの中に記載)。`budget_*` カラムは
+将来の抽出用に用意してありますが、現状は添付資料を読んだ上でMCPクライアント側が判断します。
+
+### 実データ取得についての注意
+
+このリポジトリを作成した開発環境(サンドボックス)は組織のネットワークポリシーにより
+`kkj.go.jp` への接続がブロックされていたため、**実APIへの接続は未検証**です。
+パイプライン全体(収集→重複排除→スコアリング→DB保存→MCP検索)の検証は、実レスポンス形式に
+準拠した10件のフィクスチャ(`tests/fixtures/kkj_sample_response.xml`、架空データ)で行っています。
+
+ネットワーク到達可能な環境では `python scripts/collect.py --live` でそのまま実データ収集に
+切り替わります。実データで初回実行した際は、取得件数と各項目が期待どおり埋まっているかを
+確認してください。
 
 ## セットアップ
 
@@ -44,12 +52,22 @@ python scripts/init_db.py          # DBファイル(data/sisiden_opportunities.d
 ## 案件収集
 
 ```bash
-# オフラインテスト(フィクスチャデータで動作確認)
-python scripts/collect.py --fixture tests/fixtures/kkj_sample_response.xml
+# 全国収集(映像・ドキュメンタリー系キーワードで一括検索)
+python scripts/collect.py --live
 
-# 実API接続(ネットワーク到達可能な環境で。config/kkj_api.yamlのエンドポイント確認後に)
-python scripts/collect.py --live --query 動画
+# 直近30日の公告に限定
+python scripts/collect.py --live --days 30
+
+# 単一キーワードで収集
+python scripts/collect.py --live --query ドキュメンタリー
+
+# オフライン検証(ネットワーク不要、フィクスチャデータで動作確認)
+python scripts/collect.py --fixture tests/fixtures/kkj_sample_response.xml
 ```
+
+APIは`LG_Code`未指定時に全国を対象とするため、キーワードを変えて複数回呼び出すことで
+全国の案件を収集します(サーバー負荷に配慮し、リクエスト間に1秒の待機を入れています)。
+検索キーワードは `config/keywords.yaml` の映像・ドキュメンタリーグループから自動構成されます。
 
 実行するたびに新規案件のみDBに追加され、既存案件は重複登録されません
 (`source` + `source_key`、無ければ 案件名+発注機関+公告URL+公告日 からハッシュを生成して判定)。
@@ -155,15 +173,15 @@ sisiden-hunter/
 
 ## 完成条件チェック(Phase 1)
 
-- [x] 官公需情報ポータルAPIコレクターを実装(実API仕様に準拠、設定ファイルで調整可能)
+- [x] 官公需情報ポータルAPIコレクターを実装(公式APIガイドV1.1の実仕様に準拠)
 - [x] SQLiteへ保存できる
 - [x] 重複登録しない(dedup_hashによるUNIQUE制約+アプリ側チェック)
 - [x] キーワードスコアを計算できる
 - [x] ドキュメンタリー案件を優先表示できる(`documentary_match`優先ソート)
 - [x] MCP経由で案件検索・詳細取得・ステータス変更ができる
 - [x] OpenAI APIを一切使用していない
-- [ ] 実際のkkj.go.jpからの実データ取得は、このサンドボックス環境のネットワーク制約により
-      未検証(ネットワーク到達可能な環境で `--live` オプションを使うことで対応可能)
+- [ ] 実際のkkj.go.jpからの実データ取得は、開発環境のネットワーク制約により未検証
+      (ネットワーク到達可能な環境で `--live` を実行することで確認できます)
 
 ## Phase 2/3(未実装、設計のみ意識)
 

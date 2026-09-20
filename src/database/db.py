@@ -81,6 +81,8 @@ def build_row(record: dict[str, Any], score: dict[str, Any]) -> dict[str, Any]:
         "budget_max": budget_max,
         "external_url": record.get("external_url"),
         "description": record.get("description"),
+        "location": record.get("location"),
+        "certification": record.get("certification"),
         "attachment_urls": json.dumps(record.get("attachment_urls") or [], ensure_ascii=False),
         "attachment_names": json.dumps(record.get("attachment_names") or [], ensure_ascii=False),
     }
@@ -144,8 +146,8 @@ _ROW_LIST_COLUMNS = [
 ]
 
 _ROW_DETAIL_COLUMNS = _ROW_LIST_COLUMNS + [
-    "description", "attachment_urls", "attachment_names", "source_key",
-    "user_priority", "memo", "created_at", "updated_at",
+    "description", "location", "certification", "attachment_urls", "attachment_names",
+    "source_key", "user_priority", "memo", "created_at", "updated_at",
 ]
 
 

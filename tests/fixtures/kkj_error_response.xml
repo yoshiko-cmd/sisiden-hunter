@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- テスト用: APIガイド5章のエラー応答形式 -->
+<Results>
+<Error>Invalid Date Parameter</Error>
+</Results>

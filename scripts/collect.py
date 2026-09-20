@@ -2,11 +2,13 @@
 """案件収集の実行スクリプト(要件5,33)。
 
 使い方:
-    python scripts/collect.py --live --query 動画          # 実API呼び出し
-    python scripts/collect.py --fixture tests/fixtures/kkj_sample_response.xml  # オフラインテスト
+    python scripts/collect.py --live                  # 映像・ドキュメンタリー系キーワードで全国収集
+    python scripts/collect.py --live --query 動画     # 単一キーワードで収集
+    python scripts/collect.py --live --days 30        # 直近30日の公告に限定
+    python scripts/collect.py --fixture tests/fixtures/kkj_sample_response.xml  # オフライン検証
 
-新規案件をDBへ保存し、重複は登録しない。処理結果はcollection_logsテーブルと
-標準出力にログとして記録する(取得件数/新規/重複/エラー/処理時間)。
+APIはLG_Code未指定時に全国を対象とするため、キーワードを変えて複数回呼び出すことで
+全国の案件を収集する。新規案件のみDBへ保存し、重複は登録しない。
 """
 from __future__ import annotations
 
@@ -14,13 +16,13 @@ import argparse
 import logging
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.collectors.kkj import KkjApiError, SearchCriteria, collect as kkj_collect
+from src.collectors.kkj import KkjApiError, SearchCriteria, collect as kkj_collect, collect_multi
 from src.database.db import (
     DEFAULT_DB_PATH,
     finish_collection_log,
@@ -28,10 +30,26 @@ from src.database.db import (
     save_opportunity,
     start_collection_log,
 )
+from src.scoring.keywords import load_keywords
 from src.scoring.scorer import score_opportunity
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("sisiden.collect")
+
+JST = timezone(timedelta(hours=9))
+
+
+def default_queries() -> list[str]:
+    """keywords.yamlの映像(GROUP A)・ドキュメンタリー(GROUP B)から検索キーワードを構成する。
+
+    APIのQueryは案件名・機関名・公告文を対象に全文検索するため、
+    広めの語を少数投げて網を張り、細かい絞り込みはDB側のスコアリングで行う。
+    """
+    keywords = load_keywords()
+    return [
+        *keywords["groups"]["video"]["words"][:6],
+        *keywords["groups"]["documentary"]["words"][:4],
+    ]
 
 
 def run(
@@ -39,6 +57,7 @@ def run(
     live: bool,
     fixture_path: Path | None,
     query: str | None,
+    days: int | None,
     db_path: Path = DEFAULT_DB_PATH,
 ) -> dict[str, int]:
     started = datetime.now(timezone.utc)
@@ -50,10 +69,28 @@ def run(
     new_count = 0
     duplicate_count = 0
     error_count = 0
+    note_parts: list[str] = []
+
+    published_from = None
+    if days:
+        published_from = (datetime.now(JST) - timedelta(days=days)).strftime("%Y-%m-%d")
 
     try:
-        criteria = SearchCriteria(query=query) if query else SearchCriteria(query="動画")
-        records = kkj_collect(criteria, live=live, fixture_path=fixture_path)
+        if not live:
+            records = kkj_collect(live=False, fixture_path=fixture_path)
+            note_parts.append(f"fixture:{fixture_path}")
+        elif query:
+            criteria = SearchCriteria(query=query, published_from=published_from)
+            records = kkj_collect(criteria, live=True)
+            note_parts.append(f"live:query={query}")
+        else:
+            queries = default_queries()
+            records, errors = collect_multi(queries, published_from=published_from)
+            error_count += len(errors)
+            note_parts.append(f"live:{len(queries)}keywords")
+            if errors:
+                note_parts.append(f"errors={len(errors)}")
+
         fetched_count = len(records)
         logger.info("取得 %d件", fetched_count)
 
@@ -63,15 +100,18 @@ def run(
                 is_new, opp_id = save_opportunity(conn, record, score)
                 if is_new:
                     new_count += 1
-                    logger.info("新規登録 id=%s score=%s %s", opp_id, score["keyword_score"], record.get("project_name"))
+                    logger.info(
+                        "新規登録 id=%s score=%s %s", opp_id, score["keyword_score"], record.get("project_name")
+                    )
                 else:
                     duplicate_count += 1
             except Exception:  # noqa: BLE001 - 1件のエラーで全体を止めない(要件34)
                 error_count += 1
                 logger.exception("案件の保存に失敗しました: %s", record.get("source_key"))
-    except KkjApiError as exc:
+    except (KkjApiError, ValueError) as exc:
         error_count += 1
-        logger.error("API接続エラー: %s", exc)
+        logger.error("収集エラー: %s", exc)
+        note_parts.append(f"fatal:{exc}")
     finally:
         duration = time.monotonic() - t0
         finish_collection_log(
@@ -83,7 +123,7 @@ def run(
             duplicate_count=duplicate_count,
             error_count=error_count,
             duration_seconds=duration,
-            note="live" if live else f"fixture:{fixture_path}",
+            note=" ".join(note_parts),
         )
         conn.close()
 
@@ -105,8 +145,9 @@ def run(
 def main() -> None:
     parser = argparse.ArgumentParser(description="官公需情報ポータルサイトから案件を収集する")
     parser.add_argument("--live", action="store_true", help="実APIへ接続する")
-    parser.add_argument("--fixture", type=str, help="オフラインテスト用のフィクスチャXMLパス")
-    parser.add_argument("--query", type=str, help="検索キーワード(Queryパラメータ)")
+    parser.add_argument("--fixture", type=str, help="オフライン検証用のフィクスチャXMLパス")
+    parser.add_argument("--query", type=str, help="検索キーワード(未指定なら映像・ドキュメンタリー系を一括検索)")
+    parser.add_argument("--days", type=int, help="直近N日の公告に限定する")
     parser.add_argument("--db", type=str, default=str(DEFAULT_DB_PATH), help="DBファイルパス")
     args = parser.parse_args()
 
@@ -117,6 +158,7 @@ def main() -> None:
         live=args.live,
         fixture_path=Path(args.fixture) if args.fixture else None,
         query=args.query,
+        days=args.days,
         db_path=Path(args.db),
     )
 
