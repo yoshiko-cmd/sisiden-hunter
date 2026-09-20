@@ -8,6 +8,17 @@
 
 ---
 
+## 確定している前提（2026-09-20時点）
+
+| 項目 | 状態 | 影響 |
+|---|---|---|
+| STUDIOプラン | **Businessプラン** | **Data Connect API が使える**。CMSモデル10 / CMSアイテム5,000 / 公開300ページ / カスタムコード可 |
+| STUDIOプロジェクト | `株式会社シシクリエイション`（sisicreation.com）1つのみ | SISIDEN MEDIAは同一プロジェクト内に構築（決定2） |
+| CMSの利用状況 | 未確認 | モデル残枠の確認が必要（[STEP 1-3](./01-current-site-analysis.md)）。未使用なら10枠すべて使える |
+| 掲載同意 | 取得済 | 人物ページを作れる。ただし公開はコンテンツが揃ってから |
+
+---
+
 ## 設計思想（1行）
 
 > **ONE DOCUMENTARY → MANY STORIES → PEOPLE → ISSUES → PLACES → KNOWLEDGE**

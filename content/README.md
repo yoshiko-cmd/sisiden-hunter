@@ -19,7 +19,7 @@ STUDIO CMS には**エクスポート機能がない**（2026年9月時点）。
 | `tags/*.yaml` | 確定 | 初期3タグ |
 | `areas/yokohama.yaml` | 公開 | 実在の地名。本文はTODO |
 | `organizations/tonkan.yaml` | 下書き | 正式名称の確認が必要 |
-| `people/rion-ogura.yaml` | **下書き** | **掲載同意が未取得**。`consent_status: 確認中` |
+| `people/rion-ogura.yaml` | 下書き | 掲載同意は取得済。プロフィール本文がTODOのため下書き |
 | `people/sisiden-editorial.yaml` | 下書き | 執筆者用。実名の書き手が決まったら個別に作る |
 | `issues/youth-community-space.yaml` | 下書き | `what_we_saw` が書けるまで公開しない |
 | `documentaries/tonkan.yaml` | 下書き | タイトルとサブタイトルのみ確定 |

@@ -1,4 +1,5 @@
-# 実在の人物。本人確認と掲載同意が取れるまで status は「下書き」から変更しないこと。
+# 実在の人物。掲載同意は取得済。
+# プロフィール本文が実データに差し替わるまで status は「下書き」のままにする。
 name: 小倉 莉恩
 name_kana: おぐら りおん
 name_en: Rion Ogura
@@ -22,5 +23,5 @@ areas:
   - yokohama
 issues:
   - youth-community-space
-consent_status: 確認中
+consent_status: 取得済
 status: 下書き
