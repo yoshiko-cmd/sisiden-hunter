@@ -1,0 +1,46 @@
+# 記事テンプレート。docs/sisiden-media/editorial-guideline.md に沿って書く。
+title: "TODO: 本人の言葉から引いた30〜45字のタイトル"
+lead: |
+  TODO: 120〜160字。1文目で記事の問いに答える。
+  例:「TONKANは、横浜市の若者たちが自ら立ち上げた『街の居場所』である。
+  運営の中心にいるのは大学生の小倉莉恩。SISIDENは2026年8月、4日間にわたって現場を取材した。」
+eyebrow: TONKAN ─ 証言 01
+hero_image: "TODO: メイン写真URL（16:9 / 2000x1125以上）"
+hero_caption: "TODO: 撮影場所と日付を含むキャプション"
+body: |
+  TODO: 本文。以下の記法が使える。
+
+  ## 見出しは問いの形にする
+
+  段落。固有名詞を省略せず、「先日」「昨年」「多くの」を使わない。
+
+  > 引用は行頭に > を置く。1記事に最低3つの証言を入れる。
+
+  ## 次の問い
+
+  段落。
+category: interview
+documentary: tonkan
+people:
+  - rion-ogura
+issues:
+  - youth-community-space
+primary_issue: youth-community-space
+areas:
+  - yokohama
+organizations:
+  - tonkan
+tags:
+  - youth
+  - ibasho
+published_at: 2026-09-20
+interview_date: 2026-08-12
+interview_location: "TODO: 神奈川県横浜市 〇〇"
+interview_subjects: "TODO: 小倉莉恩（TONKAN）ほか〇名"
+author: sisiden-editorial
+photographer: "TODO: 撮影者名"
+editor: "TODO: 編集者名"
+sources: |
+  TODO: 出典・参考資料を一次ソースへのリンク付きで列挙する。
+reading_time: 約8分
+status: 下書き

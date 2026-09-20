@@ -1,0 +1,43 @@
+# 実作品のテンプレート。TODO を実データに差し替えてから status を「公開」にする。
+title: TONKAN
+subtitle: 若者がつくった、街の居場所。
+key_visual: "TODO: キービジュアルURL（16:9 / 2400x1350以上）"
+portrait_visual: "TODO: 縦位置ビジュアルURL（3:4 / 1200x1600以上）"
+youtube_id: "TODO: YouTube動画ID（URLではなくID）"
+youtube_url: "TODO: https://www.youtube.com/embed/<ID>"
+duration: "TODO: 11:24 形式"
+duration_iso8601: "TODO: PT11M24S 形式（VideoObject用）"
+published_at: 2026-09-20
+lead: |
+  TODO: 120〜160字。1文目に結論（誰が・何を・どこで）。
+  最後にSISIDENの取材事実（いつ・どこで取材したか）を入れる。
+introduction: |
+  TODO: この物語について。400〜800字。
+story: |
+  TODO: あらすじ。600〜1,200字。
+background: |
+  TODO: この物語の背景。社会的・地域的文脈。
+people:
+  - rion-ogura
+issues:
+  - youth-community-space
+primary_issue: youth-community-space
+areas:
+  - yokohama
+organizations:
+  - tonkan
+tags:
+  - youth
+  - ibasho
+related_articles:
+  - tonkan-interview-ogura
+credit_direction: "TODO: 監督名"
+credit_production: SISIDEN / 株式会社シシクリエイション
+credit_cinematography: "TODO: 撮影"
+credit_editing: "TODO: 編集"
+shoot_period: "TODO: 2026年6月〜2026年8月"
+shoot_location: 神奈川県横浜市
+client: SISIDENオリジナル
+is_featured: FEATURED
+order: "010"
+status: 下書き

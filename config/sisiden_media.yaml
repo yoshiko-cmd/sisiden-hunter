@@ -1,0 +1,230 @@
+# SISIDEN MEDIA CMSモデル定義
+#
+# docs/sisiden-media/05-studio-cms-model.md の正本。
+# このファイルを変更すると、CSV/WXRエクスポート・バリデーション・
+# Data Connect API のレスポンスがすべて追従する。
+#
+# type:
+#   text / textarea / richtext / image / date / select / multiselect / slug
+#   ref:<MODEL>   単一参照
+#   refs:<MODEL>  複数参照
+
+site:
+  name: SISIDEN
+  name_ja: シシデン
+  alternate_names: [シシデン, SisiDen, SISIDEN MEDIA]
+  base_url: https://sisicreation.com/sisiden
+  publisher: 株式会社シシクリエイション
+  publisher_url: https://sisicreation.com/
+  tagline: 物語から、社会を知る。
+  description: SISIDENは、企業・行政・地域・社会課題の現場を第三者視点で取材し、そこで生きる人の物語をドキュメンタリーとして記録するメディアです。
+
+models:
+
+  categories:
+    label: CATEGORIES
+    label_ja: 記事カテゴリ
+    path: category
+    properties:
+      slug:        {type: slug,     label: スラッグ,   required: true}
+      number:      {type: text,     label: 番号,       required: true}
+      name_en:     {type: text,     label: 英語名,     required: true}
+      name_ja:     {type: text,     label: 日本語名,   required: true}
+      description: {type: textarea, label: 定義文,     required: true}
+      order:       {type: text,     label: 並び順,     required: true}
+
+  tags:
+    label: TAGS
+    label_ja: タグ
+    path: tags
+    noindex: true
+    properties:
+      slug:        {type: slug,     label: スラッグ,   required: true}
+      name:        {type: text,     label: タグ名,     required: true}
+      description: {type: textarea, label: 説明}
+      group:       {type: select,   label: 分類, options: [テーマ, 産業, 価値]}
+
+  areas:
+    label: AREAS
+    label_ja: 地域
+    path: areas
+    properties:
+      slug:          {type: slug,     label: スラッグ,   required: true}
+      name:          {type: text,     label: 地域名,     required: true}
+      name_kana:     {type: text,     label: ふりがな,   required: true}
+      prefecture:    {type: text,     label: 都道府県,   required: true}
+      region_block:  {type: select,   label: 地方ブロック, required: true,
+                      options: [北海道, 東北, 関東, 中部, 近畿, 中国, 四国, 九州・沖縄]}
+      hero_image:    {type: image,    label: メイン画像}
+      lead:          {type: textarea, label: 一文紹介,   required: true}
+      description:   {type: richtext, label: 地域の文脈}
+      latitude:      {type: text,     label: 緯度}
+      longitude:     {type: text,     label: 経度}
+      documentaries: {type: refs:documentaries, label: 関連作品}
+      articles:      {type: refs:articles,      label: 関連記事}
+      issues:        {type: refs:issues,        label: 現れている課題}
+      status:        {type: select,   label: 公開状態, required: true, options: [公開, 下書き, 非公開]}
+
+  organizations:
+    label: ORGANIZATIONS
+    label_ja: 企業・団体
+    path: organizations
+    properties:
+      slug:          {type: slug,     label: スラッグ,   required: true}
+      name:          {type: text,     label: 組織名,     required: true}
+      name_en:       {type: text,     label: 英語名}
+      org_type:      {type: select,   label: 種別, required: true,
+                      options: [企業, 自治体, 業界団体, 省庁, NPO, 教育機関]}
+      logo:          {type: image,    label: ロゴ}
+      lead:          {type: textarea, label: 一文紹介,   required: true}
+      description:   {type: richtext, label: 概要}
+      url_official:  {type: text,     label: 公式サイト, required: true}
+      documentaries: {type: refs:documentaries, label: 関連作品}
+      articles:      {type: refs:articles,      label: 関連記事}
+      areas:         {type: refs:areas,         label: 関連地域}
+      status:        {type: select,   label: 公開状態, required: true, options: [公開, 下書き, 非公開]}
+
+  people:
+    label: PEOPLE
+    label_ja: 人物
+    path: people
+    properties:
+      slug:           {type: slug,     label: スラッグ,   required: true}
+      name:           {type: text,     label: 氏名,       required: true}
+      name_kana:      {type: text,     label: ふりがな,   required: true}
+      name_en:        {type: text,     label: ローマ字表記}
+      role:           {type: select,   label: 役割, required: true,
+                       options: [主人公, 登場人物, 専門家, 制作者, 編集部]}
+      title:          {type: text,     label: 肩書き,     required: true}
+      portrait:       {type: image,    label: ポートレート, required: true}
+      lead:           {type: textarea, label: 一文紹介,   required: true}
+      profile:        {type: richtext, label: プロフィール, required: true}
+      quote:          {type: textarea, label: この人が語った言葉}
+      quote_source:   {type: ref:articles,        label: 言葉の出典}
+      documentaries:  {type: refs:documentaries,  label: 出演作品}
+      articles:       {type: refs:articles,       label: 関連記事}
+      organizations:  {type: refs:organizations,  label: 所属}
+      areas:          {type: refs:areas,          label: 活動地域}
+      issues:         {type: refs:issues,         label: 関わる社会課題}
+      after_story:    {type: richtext, label: その後}
+      url_official:   {type: text,     label: 公式サイト}
+      url_social:     {type: textarea, label: SNS}
+      is_editorial:   {type: select,   label: 編集部メンバー, options: ['YES', '-']}
+      consent_status: {type: select,   label: 掲載同意, required: true, options: [取得済, 確認中]}
+      published_at:   {type: date,     label: 公開日}
+      updated_at:     {type: date,     label: 更新日}
+      status:         {type: select,   label: 公開状態, required: true, options: [公開, 下書き, 非公開]}
+
+  issues:
+    label: ISSUES
+    label_ja: 社会課題
+    path: issues
+    properties:
+      slug:           {type: slug,     label: スラッグ,   required: true}
+      title:          {type: text,     label: 課題名,     required: true}
+      question:       {type: text,     label: 問い,       required: true}
+      answer:         {type: textarea, label: 結論・概要, required: true}
+      hero_image:     {type: image,    label: メイン画像, required: true}
+      background:     {type: richtext, label: 背景,       required: true}
+      what_we_saw:    {type: richtext, label: SISIDENが現場で見たこと, required: true}
+      voices:         {type: richtext, label: 当事者の声, required: true}
+      data_sources:   {type: richtext, label: データ・出典, required: true}
+      faq:            {type: richtext, label: よくある問い}
+      supervisor:     {type: ref:people,          label: 監修}
+      documentaries:  {type: refs:documentaries,  label: 関連作品, required: true}
+      articles:       {type: refs:articles,       label: 関連記事}
+      people:         {type: refs:people,         label: 関連人物}
+      areas:          {type: refs:areas,          label: 関連地域}
+      related_issues: {type: refs:issues,         label: 隣接する課題}
+      published_at:   {type: date,     label: 公開日,     required: true}
+      updated_at:     {type: date,     label: 更新日,     required: true}
+      status:         {type: select,   label: 公開状態, required: true, options: [公開, 下書き, 非公開]}
+
+  documentaries:
+    label: DOCUMENTARIES
+    label_ja: ドキュメンタリー
+    path: documentary
+    properties:
+      slug:                   {type: slug,     label: スラッグ,       required: true}
+      title:                  {type: text,     label: 作品タイトル,   required: true}
+      subtitle:               {type: text,     label: サブタイトル,   required: true}
+      title_en:               {type: text,     label: 英語タイトル}
+      key_visual:             {type: image,    label: キービジュアル, required: true}
+      portrait_visual:        {type: image,    label: 縦位置ビジュアル}
+      youtube_id:             {type: text,     label: YouTube動画ID,  required: true}
+      youtube_url:            {type: text,     label: YouTube埋め込みURL}
+      duration:               {type: text,     label: 上映時間,       required: true}
+      duration_iso8601:       {type: text,     label: 上映時間(ISO8601), required: true}
+      published_at:           {type: date,     label: 公開日,         required: true}
+      updated_at:             {type: date,     label: 更新日}
+      lead:                   {type: textarea, label: リード文,       required: true}
+      introduction:           {type: richtext, label: この物語について, required: true}
+      story:                  {type: richtext, label: あらすじ,       required: true}
+      background:             {type: richtext, label: この物語の背景, required: true}
+      after_story_summary:    {type: richtext, label: その後(要約)}
+      people:                 {type: refs:people,         label: 登場人物, required: true}
+      issues:                 {type: refs:issues,         label: 社会課題, required: true}
+      primary_issue:          {type: ref:issues,          label: 主たる社会課題}
+      areas:                  {type: refs:areas,          label: 地域, required: true}
+      organizations:          {type: refs:organizations,  label: 企業・団体}
+      tags:                   {type: refs:tags,           label: タグ}
+      related_articles:       {type: refs:articles,       label: 関連記事}
+      related_documentaries:  {type: refs:documentaries,  label: 次に見る作品}
+      credit_direction:       {type: text,     label: 監督,       required: true}
+      credit_production:      {type: text,     label: 制作,       required: true}
+      credit_cinematography:  {type: text,     label: 撮影}
+      credit_editing:         {type: text,     label: 編集}
+      credit_others:          {type: textarea, label: その他クレジット}
+      shoot_period:           {type: text,     label: 取材・撮影期間, required: true}
+      shoot_location:         {type: text,     label: 取材地,     required: true}
+      client:                 {type: select,   label: 制作形態, required: true,
+                               options: [SISIDENオリジナル, 企業協働, 自治体協働]}
+      is_featured:            {type: select,   label: トップ掲載, options: [FEATURED, '-']}
+      order:                  {type: text,     label: 並び順}
+      status:                 {type: select,   label: 公開状態, required: true, options: [公開, 下書き, 非公開]}
+
+  articles:
+    label: ARTICLES
+    label_ja: ストーリー
+    path: stories
+    properties:
+      slug:                {type: slug,     label: スラッグ,   required: true}
+      title:               {type: text,     label: タイトル,   required: true}
+      lead:                {type: textarea, label: リード文,   required: true}
+      eyebrow:             {type: text,     label: 前置き見出し}
+      hero_image:          {type: image,    label: メイン写真, required: true}
+      hero_caption:        {type: text,     label: 写真キャプション}
+      body:                {type: richtext, label: 本文,       required: true}
+      category:            {type: ref:categories,     label: カテゴリ, required: true}
+      documentary:         {type: ref:documentaries,  label: 関連ドキュメンタリー, required: true}
+      people:              {type: refs:people,        label: 登場人物}
+      issues:              {type: refs:issues,        label: 社会課題}
+      primary_issue:       {type: ref:issues,         label: 主たる社会課題}
+      areas:               {type: refs:areas,         label: 地域}
+      organizations:       {type: refs:organizations, label: 企業・団体}
+      tags:                {type: refs:tags,          label: タグ}
+      related_articles:    {type: refs:articles,      label: 関連記事}
+      published_at:        {type: date,     label: 公開日,     required: true}
+      updated_at:          {type: date,     label: 更新日}
+      interview_date:      {type: date,     label: 取材日,     required: true}
+      interview_location:  {type: text,     label: 取材場所,   required: true}
+      interview_subjects:  {type: text,     label: 取材対象者, required: true}
+      author:              {type: ref:people,  label: 取材・文, required: true}
+      photographer:        {type: text,     label: 撮影}
+      editor:              {type: text,     label: 編集}
+      supervisor:          {type: ref:people,  label: 監修}
+      sources:             {type: richtext, label: 出典・参考資料}
+      reading_time:        {type: text,     label: 読了目安}
+      is_featured:         {type: select,   label: 注目記事, options: [FEATURED, '-']}
+      status:              {type: select,   label: 公開状態, required: true, options: [公開, 下書き, 非公開]}
+
+# 公開前に検証するルール
+validation:
+  # 記事は必ず作品に属する
+  require_documentary_on_article: true
+  # 人物は掲載同意が取れているもののみ公開できる
+  require_consent_for_published_people: true
+  # 接続数がこれ以下のノードを「孤立」として警告する
+  min_edges_per_node: 2
+  # 1作品あたりの記事数の目標
+  target_articles_per_documentary: 3

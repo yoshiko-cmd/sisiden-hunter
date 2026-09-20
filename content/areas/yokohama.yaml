@@ -1,0 +1,13 @@
+name: 横浜
+name_kana: よこはま
+prefecture: 神奈川県
+region_block: 関東
+lead: 人口約377万人を抱える政令指定都市。都心部と住宅地、旧来の商店街が層をなして共存している。
+description: |
+  TODO: 取材を通じて見えた横浜の文脈を記述する。
+  統計を引く場合は横浜市の公式統計にリンクすること。
+documentaries:
+  - tonkan
+issues:
+  - youth-community-space
+status: 公開

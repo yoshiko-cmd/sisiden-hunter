@@ -1,0 +1,26 @@
+# 実在の人物。本人確認と掲載同意が取れるまで status は「下書き」から変更しないこと。
+name: 小倉 莉恩
+name_kana: おぐら りおん
+name_en: Rion Ogura
+role: 主人公
+title: 大学生 / TONKAN
+portrait: "TODO: ポートレート画像URL（3:4 / 800x1000以上）"
+lead: |
+  TODO: 「小倉莉恩は、横浜で〇〇をしている大学生。」の形で60〜100字。
+  1文目に「誰が・何を・どこで」を入れる（AIO原則1）。
+profile: |
+  TODO: 経歴と現在の活動。本人確認のうえ記述する。
+quote: "TODO: 取材で本人が語った象徴的な一言"
+quote_source: tonkan-interview-ogura
+documentaries:
+  - tonkan
+articles:
+  - tonkan-interview-ogura
+organizations:
+  - tonkan
+areas:
+  - yokohama
+issues:
+  - youth-community-space
+consent_status: 確認中
+status: 下書き

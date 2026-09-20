@@ -1,0 +1,13 @@
+# 執筆者は必ず人物ページを持つ（E-E-A-T）。実名の書き手が決まったら個別に作成する。
+name: SISIDEN編集部
+name_kana: ししでんへんしゅうぶ
+name_en: SISIDEN Editorial
+role: 編集部
+title: 編集部
+portrait: "TODO: 編集部用の画像URL"
+lead: SISIDENの取材・編集を担当する編集部。現場での一次取材をもとに記事を制作している。
+profile: |
+  TODO: 編集体制、編集責任者、取材ポリシーへのリンクを記述する。
+is_editorial: "YES"
+consent_status: 取得済
+status: 下書き

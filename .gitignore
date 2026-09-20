@@ -2,4 +2,5 @@ __pycache__/
 *.pyc
 data/*.db
 data/attachments/
+data/media_export/
 .pytest_cache/

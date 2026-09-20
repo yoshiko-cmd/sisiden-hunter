@@ -1,0 +1,26 @@
+title: 若者の居場所
+question: 若者の居場所とは何か？
+answer: |
+  TODO: 200〜300字で問いに直接答える。結論 → 理由 → 補足の順。
+  AI検索が抜き出すのはこのブロック。ここだけ読んで意味が通ることを確認する。
+hero_image: "TODO: 取材写真のURL（ストックフォトは使わない）"
+background: |
+  TODO: 背景・経緯・統計。公的統計は一次ソース（省庁・自治体）にリンクする。
+what_we_saw: |
+  TODO: SISIDENが現場で見たこと。ここが他メディアに書けない部分であり、
+  このページの存在理由。書けないならこのISSUEページを作らない。
+voices: |
+  TODO: 当事者の声。引用形式で、話者名と取材日を必ず添える。
+data_sources: |
+  TODO: 出典を一次ソースへのリンク付きで列挙する。
+documentaries:
+  - tonkan
+articles:
+  - tonkan-interview-ogura
+people:
+  - rion-ogura
+areas:
+  - yokohama
+published_at: 2026-09-20
+updated_at: 2026-09-20
+status: 下書き

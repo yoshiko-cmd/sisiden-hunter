@@ -1,0 +1,11 @@
+name: TONKAN
+org_type: 企業
+lead: 横浜で若者が運営する居場所づくりの取り組み。
+description: |
+  TODO: 正式名称・設立年・運営形態を本人確認のうえ記述する。
+url_official: "TODO: 公式サイトまたはSNSのURL"
+documentaries:
+  - tonkan
+areas:
+  - yokohama
+status: 下書き

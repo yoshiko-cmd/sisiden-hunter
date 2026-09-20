@@ -196,6 +196,27 @@ sisiden-hunter/
 - [ ] 実際のkkj.go.jpからの実データ取得は、開発環境のネットワーク制約により未検証
       (ネットワーク到達可能な環境で `--live` を実行することで確認できます)
 
+## SISIDEN MEDIA(Webメディア設計・STUDIO連携)
+
+YouTube中心のドキュメンタリーメディア「SISIDEN」を、記事・人物・社会課題・地域が
+相互に接続されたWebメディアへ拡張するための設計一式と、STUDIO連携ツールを同梱しています。
+
+- 設計書: [`docs/sisiden-media/`](docs/sisiden-media/README.md) (STEP1〜10 + 付録3点)
+- 正本データ: [`content/`](content/README.md)
+- CMSモデル定義: [`config/sisiden_media.yaml`](config/sisiden_media.yaml)
+
+```bash
+python scripts/media_validate.py                 # 必須項目・参照切れ・孤立ノード・掲載同意の検証
+python scripts/media_export.py --format setup    # STUDIO CMS設定チェックシート(CSV)
+python scripts/media_export.py --format jsonld   # ページごとのJSON-LD生成
+python scripts/media_export.py --format wxr      # 記事の一括インポート用WordPress XML
+python scripts/media_serve.py                    # STUDIO Data Connect API 向け配信サーバー
+python tests/test_media.py                       # テスト18件
+```
+
+STUDIO CMSにはエクスポート機能がないため、`content/` を正本のミラーとして保持し、
+そこからSTUDIOへの投入用ファイル・JSON-LD・配信APIを生成する構成にしています。
+
 ## Phase 2/3(未実装、設計のみ意識)
 
 - PPTX生成(`create_slide_spec` / `render_pptx` / `render_slide_preview`)
