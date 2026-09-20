@@ -61,7 +61,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="SISIDEN MEDIA のエクスポート")
     parser.add_argument(
         "--format", required=True,
-        choices=["csv", "setup", "wxr", "jsonld", "redirects", "all"],
+        choices=["csv", "setup", "setup-minimal", "wxr", "jsonld", "redirects", "all"],
     )
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--new-base", default="https://sisiden.jp",
@@ -76,6 +76,10 @@ def main() -> int:
         written += csv_export.export_all(repo, out_dir / "csv")
     if args.format in ("setup", "all"):
         written.append(csv_export.export_studio_setup_sheet(repo, out_dir))
+    if args.format in ("setup-minimal", "all"):
+        written.append(csv_export.export_studio_setup_sheet(
+            repo, out_dir, models=csv_export.PHASE1_MODELS, required_only=True,
+        ))
     if args.format in ("wxr", "all"):
         written.append(wxr.export_articles(repo, out_dir))
     if args.format in ("jsonld", "all"):

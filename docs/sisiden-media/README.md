@@ -43,6 +43,7 @@
 | STEP 8 | [08-structured-data.md](./08-structured-data.md) | 構造化データ設計（JSON-LDコード付き） |
 | STEP 9 | [09-design-system.md](./09-design-system.md) | デザインシステム |
 | STEP 10 | [10-studio-implementation-guide.md](./10-studio-implementation-guide.md) | STUDIO編集画面での実装手順書 |
+| STEP 11 | [11-cms-quickstart.md](./11-cms-quickstart.md) | **CMSをはじめて触る人のための手順**（ここから始める） |
 | 付録 A | [studio-capability-matrix.md](./studio-capability-matrix.md) | STUDIOで「できる / できない / 代替」一覧 |
 | 付録 B | [editorial-guideline.md](./editorial-guideline.md) | 編集ガイドライン（AIO両立の文章設計） |
 | 付録 C | [integration-toolkit.md](./integration-toolkit.md) | STUDIO連携ツールキット（本リポジトリ実装） |

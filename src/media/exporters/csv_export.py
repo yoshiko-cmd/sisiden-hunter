@@ -65,10 +65,21 @@ def export_redirect_map(repo: Repository, out_dir: Path, new_base: str) -> Path:
     return path
 
 
-def export_studio_setup_sheet(repo: Repository, out_dir: Path) -> Path:
-    """STUDIO編集画面でモデルを作る際のチェックシート。"""
+PHASE1_MODELS = ("categories", "people", "documentaries", "articles")
+
+
+def export_studio_setup_sheet(repo: Repository, out_dir: Path, *,
+                              models: tuple[str, ...] | None = None,
+                              required_only: bool = False) -> Path:
+    """STUDIO編集画面でモデルを作る際のチェックシート。
+
+    models / required_only を絞ると、初日に作る分だけのシートになる。
+    STUDIOではプロパティを後から追加できるため、最初は必須だけで始めてよい。
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / "studio_cms_setup.csv"
+    filename = "studio_cms_setup_minimal.csv" if (models or required_only) \
+        else "studio_cms_setup.csv"
+    path = out_dir / filename
 
     with open(path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
@@ -76,8 +87,13 @@ def export_studio_setup_sheet(repo: Repository, out_dir: Path) -> Path:
             "モデル", "プロパティ名", "表示ラベル", "STUDIOで選ぶタイプ",
             "参照先モデル", "選択形式", "必須", "選択肢", "設定済み",
         ])
-        for model_name, model in repo.schema.models.items():
-            for prop in model.properties:
+        target_models = models or tuple(repo.schema.models)
+        for model_name in target_models:
+            model = repo.schema.model(model_name)
+            props = model.required_properties if required_only else model.properties
+            for prop in props:
+                if required_only and prop.is_ref and prop.ref_target not in target_models:
+                    continue
                 if prop.is_ref:
                     studio_type = "参照"
                     ref_target = repo.schema.model(prop.ref_target).label

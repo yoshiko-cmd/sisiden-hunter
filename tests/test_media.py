@@ -260,6 +260,26 @@ def test_csv_export_and_setup_sheet():
         assert "ARTICLES,documentary,関連ドキュメンタリー,参照,DOCUMENTARIES,シングルセレクト" in sheet
 
 
+def test_minimal_setup_sheet_covers_only_phase1_required_properties():
+    """初日に作る分だけに絞ったシート。プロパティは後から追加できるため。"""
+    repo = _sample_repo()
+    with tempfile.TemporaryDirectory() as tmp:
+        path = csv_export.export_studio_setup_sheet(
+            repo, Path(tmp), models=csv_export.PHASE1_MODELS, required_only=True,
+        )
+        rows = path.read_text(encoding="utf-8-sig").splitlines()[1:]
+
+    assert path.name == "studio_cms_setup_minimal.csv"
+    assert all(row.split(",")[6] == "●" for row in rows)
+
+    models = {row.split(",")[0] for row in rows}
+    assert models == {"CATEGORIES", "PEOPLE", "DOCUMENTARIES", "ARTICLES"}
+
+    # Phase 1に含まれないモデルへの参照は落とす（AREASはまだ作らないため）
+    assert not any(row.split(",")[4] == "AREAS" for row in rows)
+    assert any("DOCUMENTARIES,people,登場人物,参照,PEOPLE" in row for row in rows)
+
+
 def test_redirect_map_drops_only_the_first_path_segment():
     """独立ドメイン移行を「第1階層を落とすだけ」で済ませる設計の検証。"""
     repo = _sample_repo()

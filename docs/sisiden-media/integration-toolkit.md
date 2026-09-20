@@ -286,7 +286,7 @@ python tests/test_media.py
 python -m pytest tests/test_media.py -v
 ```
 
-18件。検証ルール・JSON-LD生成・API応答・WXR出力・URL設計を網羅している。
+19件。検証ルール・JSON-LD生成・API応答・WXR出力・URL設計を網羅している。
 特に以下は設計そのものを検証している。
 
 | テスト | 検証している設計判断 |
