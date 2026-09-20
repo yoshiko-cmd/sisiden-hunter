@@ -1,0 +1,59 @@
+# 官公需情報ポータルサイト 検索API 接続設定
+#
+# 出典(WebSearch経由で確認できた公開情報。本番導入前に必ず最新のPDFで検証すること):
+#   - 公式APIガイド: https://www.kkj.go.jp/doc/ja/api_guide.pdf (V1.1, 2016年5月27日)
+#   - e-Gov APIカタログ: https://api-catalog.e-gov.go.jp/info/ja/apicatalog/view/67
+#   - レスポンス形式: XML
+#   - 検索パラメータ: Query / Project_Name / Organization_Name / LG_Code のいずれか1つ以上が必須。
+#     複数指定時はAND条件。GET/POSTどちらでも可(混在不可)。
+#   - 日付範囲パラメータ: CFT_Issue_Date(公告日) / Tender_Submission_Deadline(締切)
+#     / Opening_Tenders_Event(開札日) / Period_End_Time。
+#     形式: "YYYY-MM-DD/", "YYYY-MM-DD/YYYY-MM-DD", "YYYY-MM-DD", "/YYYY-MM-DD"
+#
+# NOTE: このサンドボックス環境は組織のネットワークポリシーにより kkj.go.jp への
+# アウトバウンド接続がブロックされているため、endpoint配下の正確なパスと
+# レスポンスXMLの要素名(response_fields)は未確認。導入時は必ず実際のPDFガイドで
+# 検証し、この設定ファイルの値のみを修正すること(コード側の変更は不要な設計にしている)。
+
+endpoint: "https://www.kkj.go.jp/api/v1/kkj_search"  # TODO: 実際のエンドポイントに要修正
+method: "GET"
+timeout_seconds: 20
+max_retries: 3
+retry_backoff_seconds: 2
+
+# 検索必須パラメータ(いずれか1つ以上を指定する)
+request_params:
+  query_param: "Query"
+  project_name_param: "Project_Name"
+  organization_name_param: "Organization_Name"
+  lg_code_param: "LG_Code"
+  cft_issue_date_param: "CFT_Issue_Date"
+  tender_submission_deadline_param: "Tender_Submission_Deadline"
+  opening_tenders_event_param: "Opening_Tenders_Event"
+  period_end_time_param: "Period_End_Time"
+
+# レスポンスXMLの要素名 -> 内部フィールド名の対応。
+# TODO: 実データ取得後、実際の要素名に合わせて調整する。
+response_fields:
+  record_xpath: ".//Record"          # 1案件を表す繰り返し要素
+  source_key: "Unique_ID"
+  project_name: "Project_Name"
+  organization_name: "Organization_Name"
+  organization_type: "Organization_Type"
+  prefecture: "Prefecture"
+  municipality: "Municipality"
+  category: "Category"
+  procedure_type: "Procedure_Type"
+  published_date: "CFT_Issue_Date"
+  deadline: "Tender_Submission_Deadline"
+  opening_date: "Opening_Tenders_Event"
+  budget_text: "Estimated_Price"
+  external_url: "Tender_URL"
+  description: "Description"
+  attachment_urls: "Attachment_URL"
+  attachment_names: "Attachment_Name"
+
+# 利用規約上の要件(要件14): 当ポータルサイトへのリンク表示が必須
+attribution_required: true
+attribution_url: "https://www.kkj.go.jp/"
+attribution_text: "本データは官公需情報ポータルサイト(https://www.kkj.go.jp/)のAPIを利用して取得しています。"
