@@ -15,8 +15,11 @@ MCP(Model Context Protocol)経由でChatGPT / Claude Desktop / Claude Code / Cod
 
 | 項目 | 実装内容 |
 |---|---|
-| エンドポイント | `https://www.kkj.go.jp/api/` (ガイド6.4) |
+| エンドポイント | `https://www.kkj.go.jp/api/` (ガイド2章) |
 | 必須パラメータ | `Query` / `Project_Name` / `Organization_Name` / `LG_Code` のいずれか1つ以上(AND条件) |
+| 取得件数 | `Count` を常に送信。**未指定時のデフォルトは10件しかない**ため必須。上限1,000件(ガイド3章) |
+| 検索式 | `OR` / `AND`(省略可) / `ANDNOT` / `NOT` / `()` に対応。演算子の前後は半角空白(ガイド3.1) |
+| 都道府県絞り込み | `LG_Code` を半角カンマ区切りで複数指定可能 |
 | 期間パラメータ | `CFT_Issue_Date` / `Tender_Submission_Deadline` / `Opening_Tenders_Event` / `Period_End_Time`。`開始日/`・`開始日/終了日`・`開始終了日`・`/終了日` の4形式に対応(ガイド3.2) |
 | レスポンス | XML。1件 = `<SearchResult>`、一意キー = `<Key>`、添付 = `<Attachments><Attachment><Name>/<Uri>`(複数対応) |
 | オプション項目 | 該当情報が無い場合タグ自体が出力されないため、欠落を前提にパース(ガイド4.2) |
@@ -26,6 +29,10 @@ MCP(Model Context Protocol)経由でChatGPT / Claude Desktop / Claude Code / Cod
 
 **発注機関タイプ**: APIに専用タグが無いため、`CityName`/`PrefectureName`の有無と機関名から
 都道府県 / 市区町村 / 国 / 独立行政法人等 / 公的機関を推定して保存します。
+
+**Category / Procedure_Type で絞り込まない理由**: APIガイドはこの2つを「灰色部分」として
+「完全にデータが整備されておりません」と明記しています。`Category=役務` で絞ると映像案件を
+取りこぼすため、収集時には指定せず、DB側のスコアリングで絞り込む方針です。
 
 **予定価格**: このAPIは金額項目を返しません(公告文PDFの中に記載)。`budget_*` カラムは
 将来の抽出用に用意してありますが、現状は添付資料を読んだ上でMCPクライアント側が判断します。
@@ -58,16 +65,22 @@ python scripts/collect.py --live
 # 直近30日の公告に限定
 python scripts/collect.py --live --days 30
 
-# 単一キーワードで収集
+# 単一キーワードで収集(検索式も使えます: "映像 OR 動画 ANDNOT 防犯カメラ" 等)
 python scripts/collect.py --live --query ドキュメンタリー
+
+# 47都道府県を1つずつ収集(1リクエスト1,000件の上限に達する場合)
+python scripts/collect.py --live --by-prefecture
 
 # オフライン検証(ネットワーク不要、フィクスチャデータで動作確認)
 python scripts/collect.py --fixture tests/fixtures/kkj_sample_response.xml
 ```
 
-APIは`LG_Code`未指定時に全国を対象とするため、キーワードを変えて複数回呼び出すことで
-全国の案件を収集します(サーバー負荷に配慮し、リクエスト間に1秒の待機を入れています)。
-検索キーワードは `config/keywords.yaml` の映像・ドキュメンタリーグループから自動構成されます。
+APIは`LG_Code`未指定時に全国を対象とします。検索キーワードは `config/keywords.yaml` の
+映像・ドキュメンタリーグループから自動構成され、OR検索式にまとめて送信されます
+(URL長に配慮して10語ずつに分割、サーバー負荷に配慮してリクエスト間に1秒の待機)。
+
+1リクエストの上限は1,000件です。上限に達した場合はログに警告が出るので、
+`--days` で期間を絞るか `--by-prefecture` で都道府県ごとに収集してください。
 
 実行するたびに新規案件のみDBに追加され、既存案件は重複登録されません
 (`source` + `source_key`、無ければ 案件名+発注機関+公告URL+公告日 からハッシュを生成して判定)。

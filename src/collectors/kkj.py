@@ -38,11 +38,27 @@ class SearchCriteria:
     query: str | None = None
     project_name: str | None = None
     organization_name: str | None = None
-    lg_code: str | None = None
+    lg_codes: list[str] | None = None       # 都道府県コード(複数可、カンマ区切りで送信)
+    certifications: list[str] | None = None  # 入札資格 A/B/C/D(複数可)
+    count: int | None = None                 # 未指定時はconfigのdefault_countを使う
     published_from: str | None = None
     published_to: str | None = None
     deadline_from: str | None = None
     deadline_to: str | None = None
+
+
+def build_or_query(words: list[str]) -> str:
+    """キーワード群をOR検索式に変換する(APIガイド3.1)。
+
+    演算子の前後には半角空白が必要。空白を含む語は()で囲んで優先順位を明示する。
+    """
+    terms = []
+    for word in words:
+        word = word.strip()
+        if not word:
+            continue
+        terms.append(f"({word})" if " " in word else word)
+    return " OR ".join(terms)
 
 
 def load_config(config_path: Path = CONFIG_PATH) -> dict[str, Any]:
@@ -68,8 +84,14 @@ def build_request_params(criteria: SearchCriteria, config: dict[str, Any]) -> di
         params[p["project_name_param"]] = criteria.project_name
     if criteria.organization_name:
         params[p["organization_name_param"]] = criteria.organization_name
-    if criteria.lg_code:
-        params[p["lg_code_param"]] = criteria.lg_code
+    if criteria.lg_codes:
+        params[p["lg_code_param"]] = ",".join(criteria.lg_codes)
+    if criteria.certifications:
+        params[p["certification_param"]] = ",".join(criteria.certifications)
+
+    # Countは未指定だとデフォルト10件しか返らないため必ず指定する(APIガイド3章)
+    count = criteria.count or config["default_count"]
+    params[p["count_param"]] = str(min(int(count), config["max_count"]))
 
     published_range = _date_range_param(criteria.published_from, criteria.published_to)
     if published_range:
@@ -231,19 +253,73 @@ def collect(
     return parse_response(xml_text, config)
 
 
+def _record_key(record: dict[str, Any]) -> str:
+    return record.get("source_key") or f"{record.get('project_name')}|{record.get('external_url')}"
+
+
 def collect_multi(
-    queries: list[str],
+    keywords: list[str],
+    *,
+    published_from: str | None = None,
+    published_to: str | None = None,
+    lg_codes: list[str] | None = None,
+    config: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """キーワード群をOR検索式にまとめて収集する。
+
+    APIはOR検索式に対応しているため、キーワードごとに個別リクエストを投げる必要はない。
+    URL長に配慮してor_query_chunk_size件ずつに分割し、結果はKeyで重複除去する。
+    LG_Code未指定時は全国が対象。1チャンクが失敗しても他は継続する(要件34)。
+
+    戻り値: (案件リスト(重複除去済み), エラーメッセージのリスト)
+    """
+    config = config or load_config()
+    interval = config.get("request_interval_seconds", 1.0)
+    chunk_size = config.get("or_query_chunk_size", 10)
+
+    collected: dict[str, dict[str, Any]] = {}
+    errors: list[str] = []
+    chunks = [keywords[i : i + chunk_size] for i in range(0, len(keywords), chunk_size)]
+
+    for i, chunk in enumerate(chunks):
+        if i > 0:
+            time.sleep(interval)
+        query = build_or_query(chunk)
+        criteria = SearchCriteria(
+            query=query,
+            published_from=published_from,
+            published_to=published_to,
+            lg_codes=lg_codes,
+        )
+        try:
+            records = collect(criteria, live=True, config=config)
+        except (KkjApiError, ValueError) as exc:
+            logger.error("検索式 '%s' の収集に失敗しました: %s", query, exc)
+            errors.append(f"{query}: {exc}")
+            continue
+
+        logger.info("検索式(%d語): %d件", len(chunk), len(records))
+        if len(records) >= config["max_count"]:
+            logger.warning(
+                "取得件数が上限(%d件)に達しました。期間や都道府県で絞り込むと取りこぼしを防げます。",
+                config["max_count"],
+            )
+        for record in records:
+            collected.setdefault(_record_key(record), record)
+
+    return list(collected.values()), errors
+
+
+def collect_by_prefecture(
+    keywords: list[str],
     *,
     published_from: str | None = None,
     published_to: str | None = None,
     config: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """複数キーワードで全国横断収集する。
+    """47都道府県を1つずつ回って収集する(1リクエスト1,000件の上限対策)。
 
-    APIはLG_Code未指定時に全国を対象とするため、キーワードを変えて複数回呼び出す。
-    1つのキーワードが失敗しても他を継続する(要件34)。
-
-    戻り値: (案件リスト(Keyで重複除去済み), エラーメッセージのリスト)
+    全国一括では上限に達する恐れがある場合に使う。
     """
     config = config or load_config()
     interval = config.get("request_interval_seconds", 1.0)
@@ -251,22 +327,19 @@ def collect_multi(
     collected: dict[str, dict[str, Any]] = {}
     errors: list[str] = []
 
-    for i, query in enumerate(queries):
+    for i, (code, name) in enumerate(sorted(config["prefecture_codes"].items())):
         if i > 0:
             time.sleep(interval)
-        criteria = SearchCriteria(
-            query=query, published_from=published_from, published_to=published_to
+        records, chunk_errors = collect_multi(
+            keywords,
+            published_from=published_from,
+            published_to=published_to,
+            lg_codes=[code],
+            config=config,
         )
-        try:
-            records = collect(criteria, live=True, config=config)
-        except (KkjApiError, ValueError) as exc:
-            logger.error("キーワード '%s' の収集に失敗しました: %s", query, exc)
-            errors.append(f"{query}: {exc}")
-            continue
-
-        logger.info("キーワード '%s': %d件", query, len(records))
+        errors.extend(f"{name}: {e}" for e in chunk_errors)
+        logger.info("%s (%s): %d件", name, code, len(records))
         for record in records:
-            key = record.get("source_key") or f"{record.get('project_name')}|{record.get('external_url')}"
-            collected.setdefault(key, record)
+            collected.setdefault(_record_key(record), record)
 
     return list(collected.values()), errors

@@ -22,7 +22,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from src.collectors.kkj import KkjApiError, SearchCriteria, collect as kkj_collect, collect_multi
+from src.collectors.kkj import (
+    KkjApiError,
+    SearchCriteria,
+    collect as kkj_collect,
+    collect_by_prefecture,
+    collect_multi,
+)
 from src.database.db import (
     DEFAULT_DB_PATH,
     finish_collection_log,
@@ -39,16 +45,16 @@ logger = logging.getLogger("sisiden.collect")
 JST = timezone(timedelta(hours=9))
 
 
-def default_queries() -> list[str]:
+def default_keywords() -> list[str]:
     """keywords.yamlの映像(GROUP A)・ドキュメンタリー(GROUP B)から検索キーワードを構成する。
 
-    APIのQueryは案件名・機関名・公告文を対象に全文検索するため、
-    広めの語を少数投げて網を張り、細かい絞り込みはDB側のスコアリングで行う。
+    APIはOR検索式に対応しているため、広めの語で網を張り、
+    細かい絞り込みはDB側のルールベーススコアリングで行う。
     """
     keywords = load_keywords()
     return [
-        *keywords["groups"]["video"]["words"][:6],
-        *keywords["groups"]["documentary"]["words"][:4],
+        *keywords["groups"]["video"]["words"],
+        *keywords["groups"]["documentary"]["words"],
     ]
 
 
@@ -58,6 +64,7 @@ def run(
     fixture_path: Path | None,
     query: str | None,
     days: int | None,
+    by_prefecture: bool = False,
     db_path: Path = DEFAULT_DB_PATH,
 ) -> dict[str, int]:
     started = datetime.now(timezone.utc)
@@ -84,10 +91,13 @@ def run(
             records = kkj_collect(criteria, live=True)
             note_parts.append(f"live:query={query}")
         else:
-            queries = default_queries()
-            records, errors = collect_multi(queries, published_from=published_from)
+            keywords = default_keywords()
+            collector = collect_by_prefecture if by_prefecture else collect_multi
+            records, errors = collector(keywords, published_from=published_from)
             error_count += len(errors)
-            note_parts.append(f"live:{len(queries)}keywords")
+            note_parts.append(
+                f"live:{len(keywords)}keywords{':by-prefecture' if by_prefecture else ''}"
+            )
             if errors:
                 note_parts.append(f"errors={len(errors)}")
 
@@ -148,6 +158,11 @@ def main() -> None:
     parser.add_argument("--fixture", type=str, help="オフライン検証用のフィクスチャXMLパス")
     parser.add_argument("--query", type=str, help="検索キーワード(未指定なら映像・ドキュメンタリー系を一括検索)")
     parser.add_argument("--days", type=int, help="直近N日の公告に限定する")
+    parser.add_argument(
+        "--by-prefecture",
+        action="store_true",
+        help="47都道府県を1つずつ収集する(1リクエスト1,000件の上限対策)",
+    )
     parser.add_argument("--db", type=str, default=str(DEFAULT_DB_PATH), help="DBファイルパス")
     args = parser.parse_args()
 
@@ -159,6 +174,7 @@ def main() -> None:
         fixture_path=Path(args.fixture) if args.fixture else None,
         query=args.query,
         days=args.days,
+        by_prefecture=args.by_prefecture,
         db_path=Path(args.db),
     )
 

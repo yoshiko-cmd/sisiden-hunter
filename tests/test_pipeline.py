@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT))
 from src.collectors.kkj import (
     KkjApiError,
     SearchCriteria,
+    build_or_query,
     build_request_params,
     collect,
     infer_organization_type,
@@ -104,12 +105,15 @@ def test_request_params_match_api_guide():
     params = build_request_params(SearchCriteria(query="映像", published_from="2026-09-01"), config)
     assert params["CFT_Issue_Date"] == "2026-09-01/"
 
-    # 「開始終了日」形式(同日指定)
+    # 「開始終了日」形式(同日指定)、都道府県コードは複数をカンマ区切りで送信
     params = build_request_params(
-        SearchCriteria(lg_code="01", published_from="2026-09-01", published_to="2026-09-01"), config
+        SearchCriteria(
+            lg_codes=["01", "13"], published_from="2026-09-01", published_to="2026-09-01"
+        ),
+        config,
     )
     assert params["CFT_Issue_Date"] == "2026-09-01"
-    assert params["LG_Code"] == "01"
+    assert params["LG_Code"] == "01,13"
 
     # 必須パラメータ未指定はエラー
     try:
@@ -118,6 +122,29 @@ def test_request_params_match_api_guide():
         pass
     else:
         raise AssertionError("必須パラメータ未指定でValueErrorが投げられていない")
+
+
+def test_count_is_always_sent():
+    """Countは未指定だとデフォルト10件しか返らないため、必ず送る必要がある(APIガイド3章)。"""
+    config = load_config()
+
+    params = build_request_params(SearchCriteria(query="動画"), config)
+    assert params["Count"] == "1000", "Count未指定時はdefault_countを送ること"
+
+    # 上限1,000を超える指定は1,000に丸める
+    params = build_request_params(SearchCriteria(query="動画", count=5000), config)
+    assert params["Count"] == "1000"
+
+    params = build_request_params(SearchCriteria(query="動画", count=50), config)
+    assert params["Count"] == "50"
+
+
+def test_or_query_syntax():
+    """OR検索式は演算子の前後に半角空白が必要(APIガイド3.1)。"""
+    assert build_or_query(["映像", "動画"]) == "映像 OR 動画"
+    assert build_or_query(["映像", "", "動画"]) == "映像 OR 動画"
+    # 空白を含む語は()で優先順位を明示する
+    assert build_or_query(["SNS 動画", "映像"]) == "(SNS 動画) OR 映像"
 
 
 def test_prefecture_codes_cover_all_47():

@@ -1,9 +1,15 @@
 # 官公需情報ポータルサイト 検索API 接続設定
 #
 # 出典: 公式APIガイド V1.1 (https://www.kkj.go.jp/doc/ja/api_guide.pdf)
-#   - エンドポイント: http://www.kkj.go.jp/api/  (6.4 コマンド例より)
+#   - エンドポイント: http://www.kkj.go.jp/api/  (2章)
 #   - 検索パラメータ: Query / Project_Name / Organization_Name / LG_Code のいずれか1つ以上が必須。
-#     複数指定時はAND条件。GET/POSTどちらでも可(混在不可)。
+#     複数指定時はAND条件。GET/POSTどちらでも可(混在不可)。パラメータの順序は任意。
+#   - Count: 返却する最大件数。★デフォルトはわずか10件。未指定だと取りこぼすため必ず指定する。
+#     1,000以上を指定した場合は1,000とみなされる(3章)。
+#   - 検索文字列は検索式が使える(3.1): AND(省略可) / OR / ANDNOT / NOT / ()。
+#     演算子の前後には半角空白が必要。AND NOTよりANDNOTが推奨(検索システムへの負荷が少ない)。
+#   - LG_Codeは半角カンマ区切りで複数都道府県を指定可能。
+#   - ASCII以外を含む文字列はUTF-8。数値・英字・期間はすべて半角。
 #   - 期間パラメータ: CFT_Issue_Date(公告日) / Tender_Submission_Deadline(入札開始日)
 #     / Opening_Tenders_Event(開札日) / Period_End_Time(納入期限日)
 #     形式: "YYYY-MM-DD/" | "YYYY-MM-DD/YYYY-MM-DD" | "YYYY-MM-DD" | "/YYYY-MM-DD"
@@ -26,10 +32,26 @@ request_params:
   project_name_param: "Project_Name"
   organization_name_param: "Organization_Name"
   lg_code_param: "LG_Code"
+  count_param: "Count"
+  certification_param: "Certification"
+  category_param: "Category"
+  procedure_type_param: "Procedure_Type"
   cft_issue_date_param: "CFT_Issue_Date"
   tender_submission_deadline_param: "Tender_Submission_Deadline"
   opening_tenders_event_param: "Opening_Tenders_Event"
   period_end_time_param: "Period_End_Time"
+
+# 1リクエストあたりの取得件数。APIの上限は1,000、未指定時のデフォルトは10。
+default_count: 1000
+max_count: 1000
+
+# 1回の検索式に含めるキーワード数の上限(URL長に配慮してOR検索を分割する)
+or_query_chunk_size: 10
+
+# 注意: Category(1.物品 2.工事 3.役務)とProcedure_Type(1.一般競争入札
+# 2.簡易公募型競争入札 3.簡易公募型指名競争入札)はAPIガイド上「灰色部分」として
+# 「完全にデータが整備されておりません」と明記されている。これらで絞り込むと
+# 取りこぼすため、収集時には指定せず、DB側のスコアリングで絞り込む方針とする。
 
 # レスポンスXMLのタグ名 -> 内部フィールド名の対応(APIガイド 4.1/4.2)
 response_fields:
