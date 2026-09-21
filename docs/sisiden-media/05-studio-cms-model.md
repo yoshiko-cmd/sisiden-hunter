@@ -321,21 +321,24 @@ STUDIOのリッチテキストで表現し、CSSで装飾する。
 テキスト / 数値 / セレクト / マルチセレクト / ブール値 / カラー / 画像 / 動画 / PDF / モデルを参照
 ```
 
-リッチテキストは、アイテム編集画面の**タイトル直下にある本文エリア**として
-各モデルに1つだけ用意されている。
+リッチテキストは、アイテム編集画面の**タイトル直下にある本文エリア**として用意されている。
+ただし**記事タイプのモデルにしかない**（ユーザータイプでは入力できないことを実機で確認）。
 
-→ **見出し・引用・画像を含む長文を置けるのは、1モデルにつき1箇所。**
+→ **見出し・引用・画像を含む長文を置けるのは、記事タイプのモデルに1箇所ずつだけ。**
+
+本文エリアを持たないモデル（ユーザータイプ・カテゴリタイプ）の長文は、
+テキストプロパティで持つ。改行は入れられるが装飾はできない。
 
 #### 本文エリアの割り当て
 
 そのページで最も長く、装飾が必要な文章に使う。
 
-| モデル | 本文エリア（リッチテキスト） | テキストプロパティで持つもの |
-|---|---|---|
-| `PEOPLE` | `profile` | `lead` |
-| `ARTICLES` | `body` | `lead` `sources` |
-| `DOCUMENTARIES` | `story`（あらすじ） | `lead` `introduction` `background` `after_story_summary` |
-| `ISSUES` | `what_we_saw`（現場で見たこと） | `answer` `background` `voices` `data_sources` `faq` |
+| モデル | 種別 | 本文エリア（リッチテキスト） | テキストプロパティで持つもの |
+|---|---|---|---|
+| `PEOPLE` | ユーザータイプ | **なし** | `lead` `profile` |
+| `ARTICLES` | 記事タイプ | `body` | `lead` `sources` |
+| `DOCUMENTARIES` | 記事タイプ | `story`（あらすじ） | `lead` `introduction` `background` `after_story_summary` |
+| `ISSUES` | 記事タイプ | `what_we_saw`（現場で見たこと） | `answer` `background` `voices` `data_sources` `faq` |
 
 `ISSUES` の本文エリアを `what_we_saw` に割り当てるのは、
 ここがSISIDENの競争優位そのもの（現場の一次情報）であり、
