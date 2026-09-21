@@ -107,10 +107,20 @@ python scripts/verify_live.py
 
 ## セットアップ
 
-### かんたん設定(推奨)
+Python環境の準備、ライブラリ導入、DB作成、実APIへの接続確認まで自動で行います。
 
-ターミナルで以下を実行するだけです。Python環境の準備、ライブラリ導入、DB作成、
-実APIへの接続確認まで自動で行います。
+#### Windows
+
+1. [リポジトリ](https://github.com/yoshiko-cmd/sisiden-hunter) の緑の **Code** ボタン →
+   **Download ZIP** でダウンロード
+2. ZIPを右クリック → **すべて展開**
+3. 展開したフォルダの中の **`setup_windows.bat`** をダブルクリック
+
+Pythonが入っていない場合は、その旨と導入手順が表示されます
+([python.org](https://www.python.org/downloads/) からインストールし、
+**インストール画面の「Add Python to PATH」に必ずチェック**を入れてください)。
+
+#### Mac / Linux
 
 ```bash
 git clone https://github.com/yoshiko-cmd/sisiden-hunter.git
