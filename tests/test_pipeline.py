@@ -247,16 +247,65 @@ def test_construction_work_is_not_scored_as_video():
         "南大樋町地区 口径100から50mm配水管更新工事",
         "愛称ロード標識撤去業務委託",
     ]:
-        result = score_fields(title, boilerplate)
+        result = score_fields(title, description=boilerplate)
         assert result.has_anchor is False, f"工事案件が映像案件と判定された: {title}"
         assert result.keyword_score == 0, f"{title} が{result.keyword_score}点になった"
         assert result.matches["documentary_match"] is False
         assert result.matches["video_match"] is False
 
     # 林業の「密着造林型」を密着取材と誤認しないこと
-    forestry = score_fields("鍋山国有林森林整備事業(誘導伐:密着造林型)", boilerplate)
+    forestry = score_fields("鍋山国有林森林整備事業(誘導伐:密着造林型)", description=boilerplate)
     assert forestry.has_anchor is False
     assert forestry.keyword_score == 0
+
+
+def test_shared_listing_page_does_not_leak_between_cases():
+    """公告文が一覧ページ全体である場合に、他案件の文章で誤検出しないこと。
+
+    実データで宮崎県の無線LAN構築・防災ネットワーク保守・パスポート輸送が
+    揃って65点になった。同じ公告ページを共有しており、そのページに
+    映像案件が含まれていたため全件が映像案件と誤認されていた。
+    """
+    from src.scoring.scorer import score_fields
+
+    # 一覧ページには本物の映像案件の文章が混ざっている
+    listing_page = (
+        "令和8年度 県政情報発信のための動画制作業務委託について入札を実施します。"
+        "ドキュメンタリー形式での記録映像の制作を含みます。"
+        "その他の公告: 無線LAN環境構築業務委託、旅券等輸送業務委託、総合防災情報ネットワーク点検保守委託。"
+    )
+
+    for title in [
+        "令和8年度無線LAN環境構築業務委託に係る入札公告",
+        "旅券(パスポート)等輸送業務委託に係る一般競争入札の実施について",
+        "総合防災情報ネットワーク関連の点検保守委託に係る一般競争入札について",
+        "【電子入札】【電子契約】認知度調査・広報媒体効果測定",
+    ]:
+        result = score_fields(title, description=listing_page)
+        assert result.has_anchor is False, f"一覧ページの他案件で誤検出された: {title}"
+        assert result.keyword_score == 0, f"{title} が{result.keyword_score}点になった"
+
+    # 同じページを公告文に持っていても、案件名が映像案件なら正しく拾う
+    genuine = score_fields("令和8年度 県政情報発信のための動画制作業務委託", description=listing_page)
+    assert genuine.has_anchor is True
+    assert genuine.anchor_source == "title"
+
+
+def test_url_encoded_project_name_is_decoded():
+    """案件名がURLエンコードされたまま入っている場合にデコードすること。"""
+    from src.collectors.kkj import decode_project_name
+
+    decoded = decode_project_name("%E5%8B%95%E7%94%BB%E5%88%B6%E4%BD%9C%E6%A5%AD%E5%8B%99")
+    assert decoded == "動画制作業務"
+
+    # 通常の案件名はそのまま
+    assert decode_project_name("地域プロモーション動画制作業務") == "地域プロモーション動画制作業務"
+    assert decode_project_name(None) is None
+
+    # デコード後にキーワード判定が効くこと
+    from src.scoring.scorer import score_fields
+
+    assert score_fields(decoded).has_anchor is True
 
 
 def test_real_video_projects_still_score():

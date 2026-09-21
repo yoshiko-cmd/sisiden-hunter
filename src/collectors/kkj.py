@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote
 
 import requests
 import yaml
@@ -174,6 +175,23 @@ def fetch_fixture(fixture_path: Path) -> str:
     return fixture_path.read_text(encoding="utf-8")
 
 
+def decode_project_name(name: str | None) -> str | None:
+    """案件名がURLエンコードされている場合にデコードする。
+
+    実データに「%E2%96%B62026.09.07_Science%20Tokyo%E8%AA%8D」のように、
+    ファイル名をURLエンコードしたまま案件名に入れている発注機関がある。
+    デコードしないとキーワード判定が一切効かない。
+    """
+    if not name or "%" not in name:
+        return name
+    try:
+        decoded = unquote(name)
+    except (UnicodeDecodeError, ValueError):
+        return name
+    # デコードで文字化けした場合(元がURLエンコードでなかった場合)は元の値を使う
+    return decoded if decoded.isprintable() else name
+
+
 def _text(element: ET.Element, tag: str) -> str | None:
     """子要素のテキストを取得する。オプション項目はタグ自体が存在しないことがある(4.2)。"""
     child = element.find(tag)
@@ -245,7 +263,7 @@ def parse_response(xml_text: str, config: dict[str, Any] | None = None) -> list[
             {
                 "source": "kkj",
                 "source_key": _text(record_el, fields["source_key"]),
-                "project_name": _text(record_el, fields["project_name"]),
+                "project_name": decode_project_name(_text(record_el, fields["project_name"])),
                 "organization_name": organization_name,
                 "organization_type": infer_organization_type(organization_name, prefecture, municipality),
                 "prefecture": prefecture,

@@ -1,14 +1,27 @@
 """ルールベースのキーワード判定・スコアリング(要件6〜10)。
 
-AIは使用しない。実データ890件での検証結果をもとに、二段階方式を採用している。
+AIは使用しない。実データでの検証を2回行い、採点対象そのものを見直した。
 
-  第1段階(anchor): 映像制作案件である裏付けがあるかを判定する
-  第2段階(groups): 裏付けのある案件に対してのみ、テーマによる加点を行う
+■ 1回目の検証(890件)で判明したこと
+  公告文の全文に対する単純なキーワード一致では建設工事が軒並み95〜100点になった。
+  「密着」は塗装の密着性・密着造林型、「撮影」は工事写真撮影として頻出し、
+  「中小企業」「環境」「災害」は官公需の公告文の定型文に必ず含まれるため。
+  → 映像案件である裏付け(anchor)を必須とする二段階方式にした。
 
-公告文(ProjectDescription)は入札説明書の全文であり、「中小企業者の受注機会確保」
-「環境への配慮」といった定型文や、工事写真撮影・塗装の密着性といった専門用語を
-含む。単純な全文一致では建設工事が軒並み満点になるため、裏付けの無い案件は
-案件名のみを対象に低い上限で採点する。
+■ 2回目の検証で判明したこと(より根本的)
+  APIのProjectDescriptionは、その案件だけの文章とは限らない。
+  発注機関によっては「他の案件も並んだ一覧ページ全体」が入っている。
+  実際、宮崎県の無線LAN構築・防災ネットワーク保守・パスポート輸送が
+  揃って同じ点数になった。同じページを共有しており、そこに映像案件が
+  1件でも含まれていたため全件が映像案件と誤認された。
+  → 公告文は採点にもanchor判定にも使わない。
+
+■ 現在の採点対象
+  案件名(ProjectName)     … その案件固有。第一の信号。
+  仕様書本文(spec_text)   … 添付PDFから抽出。その案件固有。裏付けの確証。
+  公告文(description)     … 汚染されうるため採点に使わない(検索・表示には残す)
+
+  「案件名で見つけ、仕様書で確かめる」という流れになる。
 """
 from __future__ import annotations
 
@@ -38,6 +51,7 @@ class ScoreResult:
     deprioritize_words: list[str] = field(default_factory=list)
     has_anchor: bool = False
     anchor_words: list[str] = field(default_factory=list)
+    anchor_source: str | None = None  # "title" | "spec" | None
 
     def to_db_dict(self) -> dict[str, int]:
         out = {flag: int(v) for flag, v in self.matches.items()}
@@ -52,30 +66,50 @@ def _find_matches(text: str, words: list[str]) -> list[str]:
     return [w for w in words if w and w.lower() in lowered]
 
 
-def find_anchor(title: str, body: str, keywords: dict) -> list[str]:
-    """映像制作案件である裏付けとなる語を探す。
+def find_anchor(title: str, spec_text: str, keywords: dict) -> tuple[list[str], str | None]:
+    """映像制作案件である裏付けを探す。
 
-    strong は案件名・公告文・仕様書のどこにあっても有効。
-    title_only は案件名にある場合のみ有効(公告文では定型文に紛れるため)。
+    案件名と仕様書本文のみを見る。公告文は他案件の文章を含みうるため使わない。
+
+    戻り値: (裏付けとなった語, 由来("title"|"spec"|None))
     """
     anchor = keywords["anchor"]
-    found = _find_matches(f"{title}\n{body}", anchor["strong"])
-    found += _find_matches(title, anchor["title_only"])
-    return sorted(set(found), key=len, reverse=True)
+
+    title_found = _find_matches(title, anchor["strong"]) + _find_matches(title, anchor["title_only"])
+    if title_found:
+        return sorted(set(title_found), key=len, reverse=True), "title"
+
+    # 仕様書本文はその案件固有なので、strongな語であれば裏付けとして認める。
+    # (案件名に映像と無くても、仕様書にドキュメンタリーと書かれている案件を拾うため)
+    spec_found = _find_matches(spec_text, anchor["strong"])
+    if spec_found:
+        return sorted(set(spec_found), key=len, reverse=True), "spec"
+
+    return [], None
 
 
-def score_fields(title: str, body: str = "", keywords: dict | None = None) -> ScoreResult:
-    """案件名と本文を分けて採点する。"""
+def score_fields(
+    title: str,
+    spec_text: str = "",
+    description: str = "",
+    keywords: dict | None = None,
+) -> ScoreResult:
+    """案件を採点する。
+
+    title      … 案件名。その案件固有の情報。
+    spec_text  … 添付仕様書から抽出した本文。その案件固有の情報。
+    description… 公告文。一覧ページ全体である場合があるため採点に使わない。
+                 引数として受け取るのは、呼び出し側の意図を明示するため。
+    """
     keywords = keywords or load_keywords()
     title = title or ""
-    body = body or ""
+    spec_text = spec_text or ""
 
-    anchor_words = find_anchor(title, body, keywords)
+    anchor_words, anchor_source = find_anchor(title, spec_text, keywords)
     has_anchor = bool(anchor_words)
 
-    # 裏付けがあれば本文も採点対象にする。無ければ案件名のみを見る。
-    # (公告文の定型文による誤加点を防ぐため)
-    scoring_text = f"{title}\n{body}" if has_anchor else title
+    # 裏付けがあれば仕様書本文も加点対象にする。無ければ案件名のみ。
+    scoring_text = f"{title}\n{spec_text}" if has_anchor else title
     max_score = 100 if has_anchor else keywords.get("no_anchor_max_score", 30)
 
     matches: dict[str, bool] = {}
@@ -90,19 +124,25 @@ def score_fields(title: str, body: str = "", keywords: dict | None = None) -> Sc
         if found:
             raw_score += group_def["score"]
 
+    # 裏付けの語は、それ自体が映像案件である証拠。
+    # 「ショートドラマ制作」「エンドロール制作」のように加点用キーワードには
+    # 無い表現でも、裏付けが取れた以上は映像案件として加点する。
+    if has_anchor and not matches["video_match"]:
+        matches["video_match"] = True
+        matched_words["video"] = anchor_words
+        raw_score += keywords["groups"]["video"]["score"]
+
     story = keywords["story_candidates"]
     human_story_candidate = bool(_find_matches(scoring_text, story["human_story"]["words"]))
     project_story_candidate = bool(_find_matches(scoring_text, story["project_story"]["words"]))
 
     # 業務の性質は案件名に表れるため、減点判定は案件名のみを見る。
-    # (本文で「工事写真」に触れているだけの本物の映像案件を巻き添えにしないため)
     dep = keywords.get("deprioritize", {})
     dep_words_found = _find_matches(title, dep.get("words", []))
     if dep_words_found:
         raw_score -= dep.get("score_penalty", 0)
-        # 式典記録・議会中継は「記録映像」に一致するが、ドキュメンタリー案件ではない。
-        # ランキングはdocumentary_matchを最優先でソートするため、ここで落としておかないと
-        # 本物のドキュメンタリー案件より上位に表示されてしまう。
+        # 式典記録・議会中継は「記録映像」に一致するがドキュメンタリー案件ではない。
+        # ランキングはdocumentary_matchを最優先でソートするため、ここで落としておく。
         matches["documentary_match"] = False
 
     final_score = max(0, min(max_score, raw_score))
@@ -117,28 +157,23 @@ def score_fields(title: str, body: str = "", keywords: dict | None = None) -> Sc
         deprioritize_words=dep_words_found,
         has_anchor=has_anchor,
         anchor_words=anchor_words,
+        anchor_source=anchor_source,
     )
 
 
 def score_text(text: str, keywords: dict | None = None) -> ScoreResult:
-    """単一のテキストを採点する(案件名と本文を区別しない簡易版)。"""
-    return score_fields(text, "", keywords)
+    """単一のテキストを案件名として採点する(簡易版)。"""
+    return score_fields(text, keywords=keywords)
 
 
 def score_opportunity(record: dict) -> ScoreResult:
     """案件辞書から採点する。
 
-    spec_text(添付仕様書から抽出した本文)が含まれる場合はそれも対象にする。
-    案件名に「映像」と書かれていなくても、仕様書に「ドキュメンタリー」と
-    書かれていれば裏付けとして検出される。
+    公告文(description)は採点に使わない。APIのProjectDescriptionには
+    他の案件も並んだ一覧ページ全体が入っていることがあるため。
     """
-    title = record.get("project_name") or ""
-    body = "\n".join(
-        [
-            record.get("description") or "",
-            record.get("category") or "",
-            record.get("procedure_type") or "",
-            record.get("spec_text") or "",
-        ]
+    return score_fields(
+        title=record.get("project_name") or "",
+        spec_text=record.get("spec_text") or "",
+        description=record.get("description") or "",
     )
-    return score_fields(title, body)
