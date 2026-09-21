@@ -5,6 +5,12 @@
 MCP(Model Context Protocol)経由でChatGPT / Claude Desktop / Claude Code / Codex等の
 どのMCPクライアントからでも検索・確認・選定できるようにするシステムです。
 
+> **関連システム: [SISIDEN Relationship OS](docs/relationship_os.md)**
+> 名刺交換・過去のメール・顧客・記者・自治体関係者・パートナー等を1つの人物中心DBに統合し、
+> 「この案件を誰に、どんな切り口で届けるべきか」をClaudeから自然言語で検索・判断できる
+> 営業×広報の統合リレーションシップ管理システムです(`src/relationship/` に実装)。
+> 本システムとは別DBファイル・別MCPサーバーとして独立して動作します。
+
 **OpenAI API等の従量課金LLM APIは一切使用していません。** 案件収集・一次判定は
 キーワードマッチとルールベーススコアリングのみで行い、高度な判断(主人公性の最終判定、
 提案戦略の検討)はMCPクライアント側の対話(人間+LLM)で行う設計です。
@@ -344,6 +350,18 @@ sisiden-hunter/
   deploy/
     crontab.example                          cron設定例
     com.sisiden.hunter.collect.plist.example  launchd設定例(macOS)
+```
+
+**SISIDEN Relationship OS**(人脈・メディア・案件管理、詳細は [docs/relationship_os.md](docs/relationship_os.md)):
+
+```
+  src/relationship/
+    database/schema.sql, db.py    persons中心のDBスキーマ・CRUD・重複判定
+    importers/                     Eight CSV / 既存営業リスト / メディアリストのインポーター
+    matching/scorer.py              Project→人物のルールベーススコアリング
+    mcp/server.py, tools.py          MCP Server本体(21ツール)
+  scripts/init_relationship_db.py, import_eight_csv.py, import_csv.py
+  tests/test_relationship.py, relationship_fixtures/
 ```
 
 ## ステータス値
