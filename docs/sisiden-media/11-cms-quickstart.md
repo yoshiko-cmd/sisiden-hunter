@@ -312,10 +312,37 @@ TONKAN を例にすると、入力する内容は `content/documentaries/tonkan.
 
 ---
 
+## 11-7B. スラッグ早見表
+
+アイテムを作るたびにランダム文字列が入るので、**毎回この規則で書き換える**。
+詳細は [STEP 4-4](./04-url-design.md)。
+
+| モデル | 規則 | 例 |
+|---|---|---|
+| `CATEGORIES` | カテゴリの英語名を小文字ハイフン | `interview` `field-note` `after-story` |
+| `PEOPLE` | **名-姓** のローマ字（ヘボン式・小文字） | `rion-ogura` |
+| `DOCUMENTARIES` | 作品の固有名。なければ「主題-地域」 | `tonkan` `hachijojima-typhoon` |
+| `ARTICLES` | `{作品slug}-{カテゴリ略号}-{識別子}` | `tonkan-interview-ogura` `tonkan-note-01` |
+| `ISSUES` | 問いの主語を英語の名詞句で | `youth-community-space` |
+| `AREAS` | 地名のローマ字 | `yokohama` `hachijojima` |
+
+記事のカテゴリ略号: `interview` / `note` / `issue` / `local` / `insight` / `after`
+
+### 人物スラッグが「名-姓」の理由
+
+姓名の順ではなく英語圏の語順に合わせる。
+構造化データの `givenName` / `familyName` と対応が取れ、
+海外からの参照時にも人物名として正しく読まれる。
+
+同姓同名が出た場合は `rion-ogura-2` ではなく `rion-ogura-tonkan` のように文脈を足す。
+
+---
+
 ## 11-8. よくあるつまずき
 
 | 症状 | 原因と対処 |
 |---|---|
+| プロパティのタイプを間違えて作った | **アイテムが0件のうちに削除して作り直す。**後から直すと入力済みの値を失う。特に `profile` `body` `introduction` などの長文はリッチテキストにする |
 | 参照先のモデルが選べない | そのモデルをまだ作っていない。Step 2 の順番どおりに作る |
 | 「モデルの上限に達しました」 | 既存モデルが枠を使っている。[STEP 5-8 縮退案](./05-studio-cms-model.md)へ |
 | プロパティの順番を間違えた | 問題ない。並べ替えできるし、機能には影響しない |
