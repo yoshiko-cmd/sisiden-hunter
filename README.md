@@ -107,10 +107,27 @@ python scripts/verify_live.py
 
 ## セットアップ
 
+### かんたん設定(推奨)
+
+ターミナルで以下を実行するだけです。Python環境の準備、ライブラリ導入、DB作成、
+実APIへの接続確認まで自動で行います。
+
 ```bash
+git clone https://github.com/yoshiko-cmd/sisiden-hunter.git
 cd sisiden-hunter
-pip install -r requirements.txt
-python scripts/init_db.py          # DBファイル(data/sisiden_opportunities.db)を作成
+bash setup.sh
+```
+
+最後に「実際の案件を取得できました」と出れば成功です。失敗した場合は
+到達できなかったホスト名とエラー内容が表示されるので、それを確認してください。
+
+### 手動で設定する場合
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python scripts/init_db.py     # DBファイル(data/sisiden_opportunities.db)を作成
+.venv/bin/python scripts/verify_live.py # 実APIからの取得を検証
 ```
 
 ## 案件収集

@@ -29,6 +29,8 @@ from src.database.db import get_connection, save_opportunity
 from src.scoring.scorer import score_opportunity
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+# リトライ経過の警告は結果表示と重複するため、最終的なエラーだけを見せる
+logging.getLogger("sisiden.collectors.kkj").setLevel(logging.ERROR)
 SCHEMA_PATH = ROOT / "src" / "database" / "schema.sql"
 
 
