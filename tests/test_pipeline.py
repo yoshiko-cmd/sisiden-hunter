@@ -221,6 +221,103 @@ def test_mcp_tools_end_to_end():
     asyncio.run(_run())
 
 
+def test_construction_work_is_not_scored_as_video():
+    """実データで発生した誤判定の回帰テスト。
+
+    実際の890件で、建設工事が軒並み95〜100点になった。原因は公告文に含まれる
+    「工事写真撮影」「塗装の密着性」「密着造林型」などの専門用語と、
+    「中小企業者の受注機会確保」「環境への配慮」といった定型文だった。
+    """
+    from src.scoring.scorer import score_fields
+
+    # 実データから採取した公告文の定型文(どの工事案件にも含まれる)
+    boilerplate = (
+        "本工事は中小企業者の受注機会の確保に努めるものとする。"
+        "環境への配慮を行い、廃棄物のリサイクルに努めること。"
+        "災害防止および福祉の増進に留意すること。"
+        "工事写真撮影を行い、着手前後の映像を記録し書類を編集して提出すること。"
+        "塗装は下地との密着を確認すること。"
+        "教育委員会および地域住民、学生への周知を行う。建設業許可を要する。"
+    )
+
+    for title in [
+        "総【JV】7-108-202防災備蓄倉庫新築工事",
+        "【入札公告】津屋崎中学校校舎増築1期工事",
+        "狭山市立柏原中学校除湿温度保持工事",
+        "南大樋町地区 口径100から50mm配水管更新工事",
+        "愛称ロード標識撤去業務委託",
+    ]:
+        result = score_fields(title, boilerplate)
+        assert result.has_anchor is False, f"工事案件が映像案件と判定された: {title}"
+        assert result.keyword_score == 0, f"{title} が{result.keyword_score}点になった"
+        assert result.matches["documentary_match"] is False
+        assert result.matches["video_match"] is False
+
+    # 林業の「密着造林型」を密着取材と誤認しないこと
+    forestry = score_fields("鍋山国有林森林整備事業(誘導伐:密着造林型)", boilerplate)
+    assert forestry.has_anchor is False
+    assert forestry.keyword_score == 0
+
+
+def test_real_video_projects_still_score():
+    """誤判定を潰しても、本物の映像案件は拾えること。"""
+    from src.scoring.scorer import score_fields
+
+    documentary = score_fields(
+        "伝統工芸職人の技を伝えるドキュメンタリー動画制作業務",
+        "後継者不足に悩む職人に密着取材し、その物語を記録する。",
+    )
+    assert documentary.has_anchor is True
+    assert documentary.matches["documentary_match"] is True
+    assert documentary.keyword_score >= 60
+
+    # 案件名に映像系の語があれば裏付けになる
+    title_anchor = score_fields("地域プロモーション動画制作業務委託", "観光産業の活性化を目的とする。")
+    assert title_anchor.has_anchor is True
+    assert title_anchor.matches["video_match"] is True
+
+    # 仕様書にドキュメンタリー記述があれば、案件名に無くても裏付けになる
+    from_spec = score_fields(
+        "地域資源活用事業に係る記録業務",
+        "事業者への密着取材を行いドキュメンタリー形式で記録すること。",
+    )
+    assert from_spec.has_anchor is True
+    assert from_spec.matches["documentary_match"] is True
+
+
+def test_theme_only_projects_are_capped_not_discarded():
+    """裏付けが無くても、案件名にテーマがあれば上限付きで拾う(要件39)。
+
+    ただし公告文の定型文だけに反応してはいけない。
+    """
+    from src.scoring.keywords import load_keywords
+    from src.scoring.scorer import score_fields
+
+    cap = load_keywords()["no_anchor_max_score"]
+
+    # 案件名にテーマがある → 上限付きで候補に残す
+    theme_in_title = score_fields("若者の地域定着促進に関する関係人口創出事業", "")
+    assert theme_in_title.has_anchor is False
+    assert 0 < theme_in_title.keyword_score <= cap
+
+    # 定型文にしかテーマが無い → 0点
+    boilerplate_only = score_fields(
+        "配水管更新工事", "中小企業者への配慮と環境保全、地域活性化に資する工事とする。"
+    )
+    assert boilerplate_only.keyword_score == 0
+
+
+def test_deprioritized_work_is_penalized():
+    """式典記録・議会中継・防犯カメラ等は優先度を下げる(要件39)。"""
+    from src.scoring.scorer import score_fields
+
+    ceremony = score_fields("開庁式典記録映像制作業務", "式典撮影を行う。")
+    assert ceremony.deprioritized is True
+
+    plain_pr = score_fields("観光振興PR動画制作業務", "観光地の魅力を発信する。")
+    assert ceremony.keyword_score < plain_pr.keyword_score, "式典記録は通常のPR動画より低いこと"
+
+
 def test_tier_queries_are_built_per_api_syntax():
     """3階層の検索式を組み立てる(APIガイド3.1の検索式構文)。"""
     queries_config = load_collection_queries()
