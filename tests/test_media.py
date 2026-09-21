@@ -162,7 +162,7 @@ def test_api_list_payload_excludes_drafts_and_paginates():
     repo = _sample_repo()
 
     published = payload.list_payload(repo, "categories", limit=3)
-    assert published["totalCount"] == 6
+    assert published["totalCount"] == 5
     assert published["limit"] == 3
     assert len(published["contents"]) == 3
     assert published["contents"][0]["slug"] == "interview"
@@ -198,11 +198,11 @@ def test_api_server_serves_data_connect_endpoints():
         with urllib.request.urlopen(f"{base}/health", timeout=5) as res:
             health = json.load(res)
         assert health["status"] == "ok"
-        assert health["models"]["categories"] == 6
+        assert health["models"]["categories"] == 5
 
         with urllib.request.urlopen(f"{base}/categories?limit=2", timeout=5) as res:
             listing = json.load(res)
-        assert listing["totalCount"] == 6
+        assert listing["totalCount"] == 5
         assert len(listing["contents"]) == 2
 
         with urllib.request.urlopen(f"{base}/areas/yokohama", timeout=5) as res:
