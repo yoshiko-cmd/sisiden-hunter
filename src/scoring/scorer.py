@@ -84,12 +84,18 @@ def score_text(text: str, keywords: dict | None = None) -> ScoreResult:
 
 
 def score_opportunity(record: dict) -> ScoreResult:
-    """案件辞書(project_name, description等)からスコアリング対象テキストを構成して判定する。"""
+    """案件辞書からスコアリング対象テキストを構成して判定する。
+
+    spec_text(添付仕様書から抽出した本文)が含まれる場合はそれも対象にする。
+    案件名に「映像」と書かれていなくても、仕様書に「ドキュメンタリー」と
+    書かれている案件を検出するため。
+    """
     parts = [
         record.get("project_name") or "",
         record.get("description") or "",
         record.get("category") or "",
         record.get("procedure_type") or "",
+        record.get("spec_text") or "",
     ]
     text = "\n".join(parts)
     return score_text(text)

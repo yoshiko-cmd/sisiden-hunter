@@ -20,6 +20,7 @@ logger = logging.getLogger("sisiden.collectors.kkj")
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 CONFIG_PATH = ROOT / "config" / "kkj_api.yaml"
+QUERIES_PATH = ROOT / "config" / "collection_queries.yaml"
 
 # 発注機関タイプ判定用(要件4: 発注機関タイプをDB上で判別可能にする)
 _NATIONAL_ORG_HINTS = ("省", "庁", "内閣", "裁判所", "会計検査院", "人事院")
@@ -61,8 +62,39 @@ def build_or_query(words: list[str]) -> str:
     return " OR ".join(terms)
 
 
+def build_tier_queries(tier: dict[str, Any]) -> list[str]:
+    """収集階層の定義から検索式のリストを組み立てる。
+
+    standalone: (語1 OR 語2 ...)
+    combined:   (語1 OR 語2 ...) AND (修飾語1 OR 修飾語2 ...)
+
+    演算子の優先順位はNOT > AND/OR/ANDNOT(左から評価)のため、
+    combinedでは必ず括弧で優先順位を明示する(APIガイド3.1)。
+    """
+    words = [w for w in tier.get("words", []) if w and w.strip()]
+    if not words:
+        return []
+
+    chunk_size = tier.get("chunk_size", 8)
+    chunks = [words[i : i + chunk_size] for i in range(0, len(words), chunk_size)]
+
+    if tier.get("mode") == "combined":
+        modifiers = [m for m in tier.get("modifiers", []) if m and m.strip()]
+        if not modifiers:
+            raise ValueError("mode: combined の階層には modifiers が必要です")
+        modifier_expr = build_or_query(modifiers)
+        return [f"({build_or_query(chunk)}) AND ({modifier_expr})" for chunk in chunks]
+
+    return [build_or_query(chunk) for chunk in chunks]
+
+
 def load_config(config_path: Path = CONFIG_PATH) -> dict[str, Any]:
     with open(config_path, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def load_collection_queries(path: Path = QUERIES_PATH) -> dict[str, Any]:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
@@ -221,8 +253,11 @@ def parse_response(xml_text: str, config: dict[str, Any] | None = None) -> list[
                 "category": _text(record_el, fields["category"]),
                 "procedure_type": _text(record_el, fields["procedure_type"]),
                 "published_date": _text(record_el, fields["published_date"]),
-                "deadline": _text(record_el, fields["deadline"]),
+                # TenderSubmissionDeadlineはタグ名に反しAPIガイド上「入札開始日」とされる。
+                # 応募締切と決めつけず、API由来の生値として保持する。
+                "api_tender_date": _text(record_el, fields["api_tender_date"]),
                 "opening_date": _text(record_el, fields["opening_date"]),
+                "period_end_time": _text(record_el, fields["period_end_time"]),
                 "budget_text": None,  # このAPIは予定価格を返さない(添付の公告文に記載)
                 "external_url": _text(record_el, fields["external_url"]),
                 "description": _text(record_el, fields["description"]),
@@ -257,34 +292,29 @@ def _record_key(record: dict[str, Any]) -> str:
     return record.get("source_key") or f"{record.get('project_name')}|{record.get('external_url')}"
 
 
-def collect_multi(
-    keywords: list[str],
+def collect_queries(
+    queries: list[str],
     *,
     published_from: str | None = None,
     published_to: str | None = None,
     lg_codes: list[str] | None = None,
     config: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """キーワード群をOR検索式にまとめて収集する。
+    """検索式のリストを順に実行し、結果をKeyで重複除去して返す。
 
-    APIはOR検索式に対応しているため、キーワードごとに個別リクエストを投げる必要はない。
-    URL長に配慮してor_query_chunk_size件ずつに分割し、結果はKeyで重複除去する。
-    LG_Code未指定時は全国が対象。1チャンクが失敗しても他は継続する(要件34)。
+    LG_Code未指定時は全国が対象。1つの検索式が失敗しても他は継続する(要件34)。
 
     戻り値: (案件リスト(重複除去済み), エラーメッセージのリスト)
     """
     config = config or load_config()
     interval = config.get("request_interval_seconds", 1.0)
-    chunk_size = config.get("or_query_chunk_size", 10)
 
     collected: dict[str, dict[str, Any]] = {}
     errors: list[str] = []
-    chunks = [keywords[i : i + chunk_size] for i in range(0, len(keywords), chunk_size)]
 
-    for i, chunk in enumerate(chunks):
+    for i, query in enumerate(queries):
         if i > 0:
             time.sleep(interval)
-        query = build_or_query(chunk)
         criteria = SearchCriteria(
             query=query,
             published_from=published_from,
@@ -298,7 +328,7 @@ def collect_multi(
             errors.append(f"{query}: {exc}")
             continue
 
-        logger.info("検索式(%d語): %d件", len(chunk), len(records))
+        logger.info("検索式 '%s': %d件", query[:60], len(records))
         if len(records) >= config["max_count"]:
             logger.warning(
                 "取得件数が上限(%d件)に達しました。期間や都道府県で絞り込むと取りこぼしを防げます。",
@@ -310,18 +340,99 @@ def collect_multi(
     return list(collected.values()), errors
 
 
-def collect_by_prefecture(
+def collect_multi(
     keywords: list[str],
     *,
     published_from: str | None = None,
     published_to: str | None = None,
+    lg_codes: list[str] | None = None,
     config: dict[str, Any] | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """47都道府県を1つずつ回って収集する(1リクエスト1,000件の上限対策)。
+    """キーワード群をOR検索式にまとめて収集する(URL長に配慮して分割)。"""
+    config = config or load_config()
+    chunk_size = config.get("or_query_chunk_size", 10)
+    chunks = [keywords[i : i + chunk_size] for i in range(0, len(keywords), chunk_size)]
+    queries = [build_or_query(chunk) for chunk in chunks]
+    return collect_queries(
+        queries,
+        published_from=published_from,
+        published_to=published_to,
+        lg_codes=lg_codes,
+        config=config,
+    )
+
+
+def collect_tiers(
+    *,
+    published_from: str | None = None,
+    published_to: str | None = None,
+    lg_codes: list[str] | None = None,
+    tiers: list[str] | None = None,
+    config: dict[str, Any] | None = None,
+    queries_config: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], list[str], dict[str, int]]:
+    """3階層(Priority A/B/C)で収集し、階層をまたいで重複除去する。
+
+    案件名に「映像」「動画」と書かれていなくても物語にできる案件を拾うため、
+    映像系(A)・広報発信系(B)・テーマ系(C: 発信語とAND結合)の3階層で網を張る。
+
+    戻り値: (案件リスト(重複除去済み), エラーリスト, 階層ごとの新規件数)
+    """
+    config = config or load_config()
+    queries_config = queries_config or load_collection_queries()
+
+    collected: dict[str, dict[str, Any]] = {}
+    errors: list[str] = []
+    tier_stats: dict[str, int] = {}
+
+    target_tiers = tiers or list(queries_config["tiers"].keys())
+
+    for tier_name in target_tiers:
+        tier = queries_config["tiers"].get(tier_name)
+        if tier is None:
+            errors.append(f"階層 '{tier_name}' の定義が見つかりません")
+            continue
+
+        tier_queries = build_tier_queries(tier)
+        logger.info("Priority %s (%s): 検索式%d件", tier_name, tier.get("label", ""), len(tier_queries))
+
+        records, tier_errors = collect_queries(
+            tier_queries,
+            published_from=published_from,
+            published_to=published_to,
+            lg_codes=lg_codes,
+            config=config,
+        )
+        errors.extend(f"[{tier_name}] {e}" for e in tier_errors)
+
+        before = len(collected)
+        for record in records:
+            collected.setdefault(_record_key(record), record)
+        tier_stats[tier_name] = len(collected) - before
+        logger.info(
+            "Priority %s: 取得%d件 うち新規%d件(階層間の重複を除外)",
+            tier_name,
+            len(records),
+            tier_stats[tier_name],
+        )
+
+    return list(collected.values()), errors, tier_stats
+
+
+def collect_by_prefecture(
+    *,
+    published_from: str | None = None,
+    published_to: str | None = None,
+    tiers: list[str] | None = None,
+    config: dict[str, Any] | None = None,
+    queries_config: dict[str, Any] | None = None,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """47都道府県を1つずつ、3階層で収集する(1リクエスト1,000件の上限対策)。
 
     全国一括では上限に達する恐れがある場合に使う。
     """
     config = config or load_config()
+    queries_config = queries_config or load_collection_queries()
     interval = config.get("request_interval_seconds", 1.0)
 
     collected: dict[str, dict[str, Any]] = {}
@@ -330,12 +441,13 @@ def collect_by_prefecture(
     for i, (code, name) in enumerate(sorted(config["prefecture_codes"].items())):
         if i > 0:
             time.sleep(interval)
-        records, chunk_errors = collect_multi(
-            keywords,
+        records, chunk_errors, _ = collect_tiers(
             published_from=published_from,
             published_to=published_to,
             lg_codes=[code],
+            tiers=tiers,
             config=config,
+            queries_config=queries_config,
         )
         errors.extend(f"{name}: {e}" for e in chunk_errors)
         logger.info("%s (%s): %d件", name, code, len(records))

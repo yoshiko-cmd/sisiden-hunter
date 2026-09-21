@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  macOS (launchd) で毎日07:00に収集を実行する設定例。
+  アプリ本体はスケジューラに依存しないため、この設定ファイルのみで完結する。
+
+  導入:
+    1. PROJECT_DIR のパスを実際の場所に書き換える
+    2. ~/Library/LaunchAgents/com.sisiden.hunter.collect.plist として保存
+    3. launchctl load ~/Library/LaunchAgents/com.sisiden.hunter.collect.plist
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.sisiden.hunter.collect</string>
+
+    <key>WorkingDirectory</key>
+    <string>/path/to/sisiden-hunter</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>scripts/collect.py</string>
+        <string>--live</string>
+        <string>--days</string>
+        <string>7</string>
+        <string>--lock-file</string>
+        <string>data/collect.lock</string>
+    </array>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>7</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/path/to/sisiden-hunter/data/collect.log</string>
+    <key>StandardErrorPath</key>
+    <string>/path/to/sisiden-hunter/data/collect.error.log</string>
+</dict>
+</plist>

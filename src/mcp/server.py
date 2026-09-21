@@ -30,6 +30,16 @@ SISIDENは単なる映像制作ではなく、人・地域・社会課題・プ�
 このサーバーの一次収集・スコアリングはルールベースで行われています(AI不使用)。
 高度な判断(主人公性の最終判定、提案戦略の検討)はあなた(MCPクライアント)が
 案件データ・仕様書を読んだ上で行ってください。
+
+重要な注意点:
+- 日付について: api_tender_date は官公需APIの TenderSubmissionDeadline の生値ですが、
+  APIガイド上この項目は「入札開始日」とされており、応募締切とは限りません。
+  実際の応募・企画提案締切は get_specification_text で仕様書を読んで確認し、
+  update_opportunity_status の application_deadline に記録してください。
+- 網羅性について: 官公需情報ポータルは全国すべての案件を保証していません。
+  掲載されていない案件が存在する前提で扱ってください。
+- 仕様書本文は get_specification_text でページ範囲を指定して取得できます。
+  案件名に「映像」と無くても仕様書にドキュメンタリーの記述がある場合があります。
 """
 
 mcp = MCPServer(
@@ -57,6 +67,7 @@ def search_opportunities(
     local_industry_only: bool = False,
     human_story_candidate: bool | None = None,
     project_story_candidate: bool | None = None,
+    deadline_verified: bool | None = None,
     status: str | None = None,
     limit: int = 30,
 ) -> dict:
@@ -78,6 +89,7 @@ def search_opportunities(
         local_industry_only=local_industry_only,
         human_story_candidate=human_story_candidate,
         project_story_candidate=project_story_candidate,
+        deadline_verified=deadline_verified,
         status=status,
         limit=limit,
     )
@@ -93,14 +105,40 @@ def get_specification(id: int) -> dict:
     return tools.get_specification(id)
 
 
-@mcp.tool(description="案件のステータス(new/reviewing/candidate/proposal/applied/won/lost/ignored/expired)やメモ、優先度をユーザー判断として保存する。")
+@mcp.tool(description="仕様書PDFから抽出した本文を、添付ファイルとページ範囲を指定して取得する。全文を一度に返さないため、page_from/page_toで読み進める。未取得の場合は自動でダウンロード・抽出する。")
+def get_specification_text(
+    id: int,
+    attachment_index: int = 0,
+    page_from: int = 1,
+    page_to: int | None = None,
+    max_chars: int = 6000,
+) -> dict:
+    return tools.get_specification_text(
+        id,
+        attachment_index=attachment_index,
+        page_from=page_from,
+        page_to=page_to,
+        max_chars=max_chars,
+    )
+
+
+@mcp.tool(description="案件のステータス(new/reviewing/candidate/proposal/applied/won/lost/ignored/expired)、メモ、優先度、および仕様書で確認した実際の応募締切(application_deadline)をユーザー判断として保存する。")
 def update_opportunity_status(
     id: int,
     status: str | None = None,
     memo: str | None = None,
     user_priority: int | None = None,
+    application_deadline: str | None = None,
+    deadline_source: str | None = None,
 ) -> dict:
-    return tools.update_opportunity_status(id, status=status, memo=memo, user_priority=user_priority)
+    return tools.update_opportunity_status(
+        id,
+        status=status,
+        memo=memo,
+        user_priority=user_priority,
+        application_deadline=application_deadline,
+        deadline_source=deadline_source,
+    )
 
 
 @mcp.tool(description="SISIDEN向けランキング(ドキュメンタリー明記 > キーワードスコア > 締切までの日数 > 新着順)で上位案件を表示する。")

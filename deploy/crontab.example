@@ -1,0 +1,26 @@
+# SISIDEN 案件ハンター 定期実行の設定例(cron)
+#
+# アプリ本体にスケジューラ依存のコードは入れていない。
+# 実行環境に応じて、この例をcrontabへ貼るか、launchd/systemd/タスクスケジューラ等に置き換える。
+#
+# 導入:
+#   crontab -e
+# して以下を貼り、PROJECT_DIR を実際のパスに書き換える。
+#
+# 終了コード: 0=正常, 1=エラーあり, 2=多重起動を検知して中断
+
+PROJECT_DIR=/path/to/sisiden-hunter
+PYTHON=/usr/bin/python3
+
+# 毎日 07:00 に直近7日の公告を収集
+0 7 * * * cd $PROJECT_DIR && $PYTHON scripts/collect.py --live --days 7 \
+  --log-file data/collect.log --lock-file data/collect.lock
+
+# 毎日 07:30 に候補案件の仕様書PDFを取得・抽出して再スコアリング
+# (収集の直後に流すことで「仕様書にドキュメンタリーと書いてある案件」を拾う)
+30 7 * * * cd $PROJECT_DIR && $PYTHON scripts/enrich.py --min-score 25 --limit 50 \
+  >> data/enrich.log 2>&1
+
+# 週1回(日曜 03:00)は都道府県ごとに巡回し、取りこぼしを補う
+0 3 * * 0 cd $PROJECT_DIR && $PYTHON scripts/collect.py --live --days 30 --by-prefecture \
+  --log-file data/collect.log --lock-file data/collect.lock

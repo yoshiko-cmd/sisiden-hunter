@@ -68,7 +68,9 @@ response_fields:
   category: "Category"               # 物品 / 役務 / 工事
   procedure_type: "ProcedureType"    # 一般競争入札、指名競争入札など
   published_date: "CftIssueDate"     # 公告日(存在しない場合はデータ取得日)
-  deadline: "TenderSubmissionDeadline"
+  # 注意: タグ名は Deadline だが、APIガイドの項目説明は「入札開始日」。
+  # 応募締切と決めつけず api_tender_date として保存し、実際の締切は仕様書で確認する。
+  api_tender_date: "TenderSubmissionDeadline"
   opening_date: "OpeningTendersEvent"
   period_end_time: "PeriodEndTime"   # 納入期限日
   external_url: "ExternalDocumentURI"

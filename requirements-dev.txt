@@ -1,0 +1,4 @@
+# テスト専用の依存(本番の収集・MCP動作には不要)
+# reportlab: 日本語テキストを埋め込んだPDFを生成し、pypdfの抽出を実データに近い形で検証する
+-r requirements.txt
+reportlab>=4.0

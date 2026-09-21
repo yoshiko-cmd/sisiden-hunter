@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 import time
 from datetime import datetime, timedelta, timezone
@@ -27,7 +28,7 @@ from src.collectors.kkj import (
     SearchCriteria,
     collect as kkj_collect,
     collect_by_prefecture,
-    collect_multi,
+    collect_tiers,
 )
 from src.database.db import (
     DEFAULT_DB_PATH,
@@ -36,7 +37,6 @@ from src.database.db import (
     save_opportunity,
     start_collection_log,
 )
-from src.scoring.keywords import load_keywords
 from src.scoring.scorer import score_opportunity
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -45,17 +45,11 @@ logger = logging.getLogger("sisiden.collect")
 JST = timezone(timedelta(hours=9))
 
 
-def default_keywords() -> list[str]:
-    """keywords.yamlの映像(GROUP A)・ドキュメンタリー(GROUP B)から検索キーワードを構成する。
-
-    APIはOR検索式に対応しているため、広めの語で網を張り、
-    細かい絞り込みはDB側のルールベーススコアリングで行う。
-    """
-    keywords = load_keywords()
-    return [
-        *keywords["groups"]["video"]["words"],
-        *keywords["groups"]["documentary"]["words"],
-    ]
+def _parse_tiers(value: str | None) -> list[str] | None:
+    """--tiers "A,B" 形式の指定を解釈する。未指定なら全階層。"""
+    if not value:
+        return None
+    return [t.strip().upper() for t in value.split(",") if t.strip()]
 
 
 def run(
@@ -65,6 +59,7 @@ def run(
     query: str | None,
     days: int | None,
     by_prefecture: bool = False,
+    tiers: list[str] | None = None,
     db_path: Path = DEFAULT_DB_PATH,
 ) -> dict[str, int]:
     started = datetime.now(timezone.utc)
@@ -90,13 +85,17 @@ def run(
             criteria = SearchCriteria(query=query, published_from=published_from)
             records = kkj_collect(criteria, live=True)
             note_parts.append(f"live:query={query}")
+        elif by_prefecture:
+            records, errors = collect_by_prefecture(published_from=published_from, tiers=tiers)
+            error_count += len(errors)
+            note_parts.append("live:tiers:by-prefecture")
+            if errors:
+                note_parts.append(f"errors={len(errors)}")
         else:
-            keywords = default_keywords()
-            collector = collect_by_prefecture if by_prefecture else collect_multi
-            records, errors = collector(keywords, published_from=published_from)
+            records, errors, tier_stats = collect_tiers(published_from=published_from, tiers=tiers)
             error_count += len(errors)
             note_parts.append(
-                f"live:{len(keywords)}keywords{':by-prefecture' if by_prefecture else ''}"
+                "live:tiers:" + ",".join(f"{k}={v}" for k, v in tier_stats.items())
             )
             if errors:
                 note_parts.append(f"errors={len(errors)}")
@@ -152,32 +151,63 @@ def run(
     return summary
 
 
-def main() -> None:
+def main() -> int:
+    """CLIエントリポイント。cron等から定期実行できるよう終了コードを返す。
+
+    スケジューラ固有の処理はここには書かない(deploy/ に設定例を置く)。
+    終了コード: 0=正常, 1=エラーあり, 2=多重起動を検知して中断
+    """
     parser = argparse.ArgumentParser(description="官公需情報ポータルサイトから案件を収集する")
     parser.add_argument("--live", action="store_true", help="実APIへ接続する")
     parser.add_argument("--fixture", type=str, help="オフライン検証用のフィクスチャXMLパス")
-    parser.add_argument("--query", type=str, help="検索キーワード(未指定なら映像・ドキュメンタリー系を一括検索)")
+    parser.add_argument("--query", type=str, help="検索式を直接指定する(未指定なら3階層収集)")
     parser.add_argument("--days", type=int, help="直近N日の公告に限定する")
+    parser.add_argument("--tiers", type=str, help="収集する階層(例: A,B)。未指定なら全階層")
     parser.add_argument(
         "--by-prefecture",
         action="store_true",
         help="47都道府県を1つずつ収集する(1リクエスト1,000件の上限対策)",
     )
     parser.add_argument("--db", type=str, default=str(DEFAULT_DB_PATH), help="DBファイルパス")
+    parser.add_argument("--log-file", type=str, help="ログの出力先ファイル(cron実行時に指定)")
+    parser.add_argument("--lock-file", type=str, help="多重起動防止用のロックファイル")
     args = parser.parse_args()
 
     if not args.live and not args.fixture:
         parser.error("--live または --fixture のいずれかを指定してください")
 
-    run(
-        live=args.live,
-        fixture_path=Path(args.fixture) if args.fixture else None,
-        query=args.query,
-        days=args.days,
-        by_prefecture=args.by_prefecture,
-        db_path=Path(args.db),
-    )
+    if args.log_file:
+        handler = logging.FileHandler(args.log_file, encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+        logging.getLogger().addHandler(handler)
+
+    lock_path = Path(args.lock_file) if args.lock_file else None
+    if lock_path:
+        try:
+            # O_EXCLで原子的に作成。既に存在する場合は前回実行が進行中とみなす。
+            fd = os.open(lock_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+        except FileExistsError:
+            logger.error("ロックファイルが存在します(前回の実行が進行中の可能性): %s", lock_path)
+            return 2
+
+    try:
+        summary = run(
+            live=args.live,
+            fixture_path=Path(args.fixture) if args.fixture else None,
+            query=args.query,
+            days=args.days,
+            by_prefecture=args.by_prefecture,
+            tiers=_parse_tiers(args.tiers),
+            db_path=Path(args.db),
+        )
+    finally:
+        if lock_path:
+            lock_path.unlink(missing_ok=True)
+
+    return 1 if summary["error_count"] else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

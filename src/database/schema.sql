@@ -19,9 +19,16 @@ CREATE TABLE IF NOT EXISTS opportunities (
     procedure_type            TEXT,                          -- 入札形式(一般競争入札、公募等)
 
     -- 日程
-    published_date            TEXT,                          -- ISO8601 (YYYY-MM-DD)
-    deadline                  TEXT,
-    opening_date               TEXT,
+    -- 注意: APIの TenderSubmissionDeadline はタグ名に反して、APIガイドの項目説明では
+    -- 「入札開始日」とされている。応募締切と決めつけず、API由来の値と
+    -- 仕様書で確認した実際の応募・企画提案締切を別カラムで保持する。
+    published_date            TEXT,                          -- 公告日 (CftIssueDate, ISO8601)
+    api_tender_date           TEXT,                          -- API由来 (TenderSubmissionDeadline) の生値
+    application_deadline      TEXT,                          -- 仕様書等で確認した実際の応募締切
+    deadline_verified         INTEGER NOT NULL DEFAULT 0,    -- application_deadlineを人/クライアントが確認済みか
+    deadline_source           TEXT,                          -- 確認元(例: 仕様書p.3, 公募要項)
+    opening_date               TEXT,                          -- 開札日 (OpeningTendersEvent)
+    period_end_time             TEXT,                          -- 納入期限日 (PeriodEndTime)
 
     -- 金額
     budget_text                TEXT,
@@ -35,6 +42,14 @@ CREATE TABLE IF NOT EXISTS opportunities (
     certification                 TEXT,                        -- 参加資格(A/B/C/D等)
     attachment_urls              TEXT,                        -- JSON配列文字列
     attachment_names              TEXT,                        -- JSON配列文字列
+
+    -- 添付資料のローカル取得・本文抽出(pypdfによるローカル処理。LLM API不使用)
+    spec_text_status               TEXT NOT NULL DEFAULT 'pending',  -- pending/extracted/empty/failed/no_attachment
+    spec_text_chars                 INTEGER NOT NULL DEFAULT 0,
+    spec_text_pages                  INTEGER NOT NULL DEFAULT 0,
+    spec_text_extracted_at            TEXT,
+    spec_text_note                     TEXT,                        -- 失敗理由や画像PDFである旨
+    scored_with_spec_text               INTEGER NOT NULL DEFAULT 0,  -- 抽出本文を含めて再スコアリング済みか
 
     -- ルールベース判定フラグ (キーワードグループ一致)
     video_match                   INTEGER NOT NULL DEFAULT 0,   -- GROUP A 映像・動画
@@ -65,7 +80,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_opportunities_dedup_hash ON opportunities(
 CREATE INDEX IF NOT EXISTS idx_opportunities_source_key ON opportunities(source, source_key);
 CREATE INDEX IF NOT EXISTS idx_opportunities_prefecture ON opportunities(prefecture);
 CREATE INDEX IF NOT EXISTS idx_opportunities_published_date ON opportunities(published_date);
-CREATE INDEX IF NOT EXISTS idx_opportunities_deadline ON opportunities(deadline);
+CREATE INDEX IF NOT EXISTS idx_opportunities_api_tender_date ON opportunities(api_tender_date);
+CREATE INDEX IF NOT EXISTS idx_opportunities_application_deadline ON opportunities(application_deadline);
+CREATE INDEX IF NOT EXISTS idx_opportunities_spec_text_status ON opportunities(spec_text_status);
 CREATE INDEX IF NOT EXISTS idx_opportunities_status ON opportunities(status);
 CREATE INDEX IF NOT EXISTS idx_opportunities_keyword_score ON opportunities(keyword_score);
 

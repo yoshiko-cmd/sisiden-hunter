@@ -74,8 +74,9 @@ def build_row(record: dict[str, Any], score: dict[str, Any]) -> dict[str, Any]:
         "category": record.get("category"),
         "procedure_type": record.get("procedure_type"),
         "published_date": record.get("published_date"),
-        "deadline": record.get("deadline"),
+        "api_tender_date": record.get("api_tender_date"),
         "opening_date": record.get("opening_date"),
+        "period_end_time": record.get("period_end_time"),
         "budget_text": record.get("budget_text"),
         "budget_min": budget_min,
         "budget_max": budget_max,
@@ -139,16 +140,24 @@ _ALLOWED_STATUSES = {
 _ROW_LIST_COLUMNS = [
     "id", "source", "project_name", "organization_name", "organization_type",
     "prefecture", "municipality", "category", "procedure_type",
-    "published_date", "deadline", "opening_date", "budget_text", "budget_min", "budget_max",
+    "published_date", "api_tender_date", "application_deadline", "deadline_verified",
+    "opening_date", "budget_text", "budget_min", "budget_max",
     "external_url", "video_match", "documentary_match", "social_issue_match",
     "local_industry_match", "youth_match", "community_match", "education_match",
     "human_story_candidate", "project_story_candidate", "keyword_score", "status",
+    "spec_text_status", "scored_with_spec_text",
 ]
 
 _ROW_DETAIL_COLUMNS = _ROW_LIST_COLUMNS + [
     "description", "location", "certification", "attachment_urls", "attachment_names",
-    "source_key", "user_priority", "memo", "created_at", "updated_at",
+    "source_key", "deadline_source", "period_end_time", "spec_text_chars", "spec_text_pages",
+    "spec_text_extracted_at", "spec_text_note", "user_priority", "memo",
+    "created_at", "updated_at",
 ]
+
+# 有効締切: 確認済みの応募締切があればそれを、無ければAPI由来の日付を使う。
+# api_tender_dateは「入札開始日」の可能性があるため、応募締切と同一視しない。
+_EFFECTIVE_DEADLINE = "COALESCE(application_deadline, api_tender_date)"
 
 
 def _row_to_dict(row: sqlite3.Row, columns: list[str]) -> dict[str, Any]:
@@ -182,6 +191,7 @@ def search_opportunities(
     local_industry_only: bool = False,
     human_story_candidate: bool | None = None,
     project_story_candidate: bool | None = None,
+    deadline_verified: bool | None = None,
     status: str | None = None,
     limit: int = 30,
 ) -> list[dict[str, Any]]:
@@ -205,11 +215,14 @@ def search_opportunities(
         where.append("published_date <= ?")
         params.append(published_to)
     if deadline_from:
-        where.append("deadline >= ?")
+        where.append(f"{_EFFECTIVE_DEADLINE} >= ?")
         params.append(deadline_from)
     if deadline_to:
-        where.append("deadline <= ?")
+        where.append(f"{_EFFECTIVE_DEADLINE} <= ?")
         params.append(deadline_to)
+    if deadline_verified is not None:
+        where.append("deadline_verified = ?")
+        params.append(int(deadline_verified))
     if min_score is not None:
         where.append("keyword_score >= ?")
         params.append(min_score)
@@ -268,8 +281,10 @@ def update_opportunity_status(
     status: str | None = None,
     memo: str | None = None,
     user_priority: int | None = None,
+    application_deadline: str | None = None,
+    deadline_source: str | None = None,
 ) -> dict[str, Any] | None:
-    """要件18: ユーザー判断(ステータス/メモ/優先度)を保存する。"""
+    """要件18: ユーザー判断(ステータス/メモ/優先度/確認済み応募締切)を保存する。"""
     if status is not None and status not in _ALLOWED_STATUSES:
         raise ValueError(f"不正なstatusです: {status} (許可値: {sorted(_ALLOWED_STATUSES)})")
 
@@ -284,6 +299,14 @@ def update_opportunity_status(
     if user_priority is not None:
         sets.append("user_priority = ?")
         params.append(user_priority)
+    if application_deadline is not None:
+        # 仕様書等で確認した実際の応募締切。設定された時点で確認済みとして扱う。
+        sets.append("application_deadline = ?")
+        params.append(application_deadline)
+        sets.append("deadline_verified = 1")
+    if deadline_source is not None:
+        sets.append("deadline_source = ?")
+        params.append(deadline_source)
 
     params.append(opportunity_id)
     conn.execute(f"UPDATE opportunities SET {', '.join(sets)} WHERE id = ?", params)
@@ -315,8 +338,8 @@ def list_top_opportunities(
         ORDER BY
             documentary_match DESC,
             keyword_score DESC,
-            CASE WHEN deadline IS NULL OR deadline = '' THEN 1 ELSE 0 END,
-            deadline ASC,
+            CASE WHEN {_EFFECTIVE_DEADLINE} IS NULL OR {_EFFECTIVE_DEADLINE} = '' THEN 1 ELSE 0 END,
+            {_EFFECTIVE_DEADLINE} ASC,
             published_date DESC
         LIMIT ?
     """
