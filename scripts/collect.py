@@ -34,9 +34,11 @@ from src.database.db import (
     DEFAULT_DB_PATH,
     finish_collection_log,
     get_connection,
+    get_opportunity_by_id,
     save_opportunity,
     start_collection_log,
 )
+from src.notify.discord import post_opportunities, select_notifiable
 from src.scoring.scorer import score_opportunity
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -60,6 +62,7 @@ def run(
     days: int | None,
     by_prefecture: bool = False,
     tiers: list[str] | None = None,
+    notify: bool = True,
     db_path: Path = DEFAULT_DB_PATH,
 ) -> dict[str, int]:
     started = datetime.now(timezone.utc)
@@ -71,6 +74,7 @@ def run(
     new_count = 0
     duplicate_count = 0
     error_count = 0
+    new_ids: list[int] = []
     note_parts: list[str] = []
 
     published_from = None
@@ -109,6 +113,7 @@ def run(
                 is_new, opp_id = save_opportunity(conn, record, score)
                 if is_new:
                     new_count += 1
+                    new_ids.append(opp_id)
                     logger.info(
                         "新規登録 id=%s score=%s %s", opp_id, score["keyword_score"], record.get("project_name")
                     )
@@ -117,6 +122,21 @@ def run(
             except Exception:  # noqa: BLE001 - 1件のエラーで全体を止めない(要件34)
                 error_count += 1
                 logger.exception("案件の保存に失敗しました: %s", record.get("source_key"))
+        # 新規登録された案件のうち、条件を満たすものをDiscordへ通知する。
+        # 通知の失敗で収集処理を止めない(要件34)。
+        if new_ids and notify:
+            try:
+                new_records = [
+                    opp for opp in (get_opportunity_by_id(conn, i) for i in new_ids) if opp
+                ]
+                targets = select_notifiable(new_records)
+                if targets:
+                    post_opportunities(
+                        targets,
+                        summary=f"**新着案件 {len(targets)}件**(収集{fetched_count}件中 新規{new_count}件)",
+                    )
+            except Exception:  # noqa: BLE001 - 通知は付随機能のため全体を止めない
+                logger.exception("Discord通知に失敗しました")
     except (KkjApiError, ValueError) as exc:
         error_count += 1
         logger.error("収集エラー: %s", exc)
@@ -169,6 +189,7 @@ def main() -> int:
         help="47都道府県を1つずつ収集する(1リクエスト1,000件の上限対策)",
     )
     parser.add_argument("--db", type=str, default=str(DEFAULT_DB_PATH), help="DBファイルパス")
+    parser.add_argument("--no-notify", action="store_true", help="Discordへの新着通知を行わない")
     parser.add_argument("--log-file", type=str, help="ログの出力先ファイル(cron実行時に指定)")
     parser.add_argument("--lock-file", type=str, help="多重起動防止用のロックファイル")
     args = parser.parse_args()
@@ -200,6 +221,7 @@ def main() -> int:
             days=args.days,
             by_prefecture=args.by_prefecture,
             tiers=_parse_tiers(args.tiers),
+            notify=not args.no_notify,
             db_path=Path(args.db),
         )
     finally:

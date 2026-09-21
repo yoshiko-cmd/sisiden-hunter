@@ -1,0 +1,29 @@
+# Discord通知の設定
+#
+# 使い方:
+#   1. このファイルを notify.yaml という名前でコピーする
+#   2. Discordで Webhook URL を取得して webhook_url に貼る
+#      (サーバー設定 → 連携サービス → ウェブフック → 新しいウェブフック
+#       → 投稿先チャンネルを選ぶ → 「ウェブフックURLをコピー」)
+#   3. enabled を true にする
+#
+# 注意: notify.yaml は .gitignore で除外されています。
+# Webhook URLを知っている人は誰でもそのチャンネルに投稿できるため、
+# 他人に共有したりGitにコミットしたりしないでください。
+#
+# URLを設定ファイルに書きたくない場合は、環境変数でも指定できます。
+#   SISIDEN_DISCORD_WEBHOOK=https://discord.com/api/webhooks/...
+# 環境変数が設定されていれば、そちらが優先されます。
+
+discord:
+  enabled: false
+  webhook_url: "https://discord.com/api/webhooks/XXXXXXXX/XXXXXXXX"
+
+  # 通知する最低スコア。0にすると全件通知されるため注意。
+  min_score: 1
+
+  # trueにすると、ドキュメンタリー案件のみ通知する
+  documentary_only: false
+
+  # 1回の収集で通知する最大件数(多すぎるとチャンネルが埋まるため)
+  max_items: 20

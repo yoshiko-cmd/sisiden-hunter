@@ -1,6 +1,9 @@
 .venv/
 venv/
 __pycache__/
+
+# Discord Webhook URL を含むため、絶対にコミットしない
+config/notify.yaml
 *.pyc
 data/*.db
 data/attachments/

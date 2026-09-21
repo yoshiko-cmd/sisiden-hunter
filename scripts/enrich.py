@@ -69,12 +69,20 @@ def main() -> int:
                     " (ドキュメンタリー検出)" if result["documentary_match"] else "",
                 )
             else:
-                logger.info("id=%s %s", opportunity_id, result["status"])
+                # 失敗した場合は理由まで表示する(原因調査のため)
+                detail = result.get("note") or ""
+                files = result.get("files")
+                if files:
+                    detail = f"{detail} [{', '.join(str(f) for f in files[:2])}]"
+                logger.info("id=%s %s %s", opportunity_id, result["status"], detail.strip())
 
         logger.info(
-            "完了: 抽出%d件 テキスト無し%d件 添付無し%d件 DL失敗%d件 / スコア変動%d件",
+            "完了: 抽出%d件 / PDF以外%d件 テキスト無し(画像PDF等)%d件 "
+            "解析失敗%d件 添付無し%d件 DL失敗%d件 / スコア変動%d件",
             stats.get("extracted", 0),
+            stats.get("not_pdf", 0),
             stats.get("empty", 0),
+            stats.get("failed", 0),
             stats.get("no_attachment", 0),
             stats.get("download_failed", 0),
             upgraded,

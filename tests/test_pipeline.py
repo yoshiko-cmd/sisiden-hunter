@@ -522,6 +522,55 @@ def test_pdf_text_extraction_finds_documentary_in_spec():
     assert with_spec.keyword_score > score_opportunity(record).keyword_score
 
 
+def test_attachment_filename_keeps_extension():
+    """添付ファイル名はリンク文字列(拡張子なし)のため、URLやContent-Typeから補うこと。
+
+    実データで仕様書PDFの抽出が25件中21件失敗した。原因は、APIの添付ファイル名が
+    「入札公告」「仕様書」のようなリンク文字列で拡張子を持たず、
+    保存時に拡張子が失われてPDFと認識されなかったこと。
+    """
+    from src.attachments.downloader import resolve_filename
+
+    # URLに拡張子がある場合はそれを使う
+    assert resolve_filename("https://example.jp/t/spec.pdf", "仕様書") == "仕様書.pdf"
+    assert resolve_filename("https://example.jp/t/youkou.pdf", "入札公告(PDF:245KB)").endswith(".pdf")
+
+    # URLに拡張子が無い場合はContent-Typeから補う
+    assert resolve_filename("https://example.jp/download?id=12", "仕様書", "application/pdf") == "仕様書.pdf"
+    assert (
+        resolve_filename("https://example.jp/download?id=12", "様式集", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        == "様式集.docx"
+    )
+
+    # どちらからも判定できない場合でも、安全な名前を返す
+    assert resolve_filename("https://example.jp/download", "仕様書") == "仕様書"
+
+
+def test_file_type_is_detected_by_content_not_extension():
+    """拡張子ではなくファイルの中身で種別を判定すること。"""
+    import tempfile
+
+    from src.attachments.extractor import detect_file_type, extract_pdf_text
+
+    tmp_dir = Path(tempfile.mkdtemp())
+
+    # 拡張子が無くても中身がPDFなら抽出できる
+    no_extension = tmp_dir / "仕様書"
+    _write_test_pdf(no_extension, ["仕様書の本文です。ドキュメンタリー形式で記録すること。"])
+    assert detect_file_type(no_extension) == "pdf"
+    doc = extract_pdf_text(no_extension)
+    assert doc.status == "extracted"
+    assert "ドキュメンタリー" in "".join(doc.pages)
+
+    # 拡張子が.pdfでも中身がHTMLなら、その旨を報告する
+    fake_pdf = tmp_dir / "spec.pdf"
+    fake_pdf.write_text("<!DOCTYPE html><html><body>案内ページ</body></html>", encoding="utf-8")
+    assert detect_file_type(fake_pdf) == "html"
+    html_doc = extract_pdf_text(fake_pdf)
+    assert html_doc.status == "unsupported"
+    assert "HTML" in (html_doc.note or "")
+
+
 def test_extractor_reports_image_only_pdf_honestly():
     """テキストが埋め込まれていないPDFは、できたことにせずemptyとして記録する。"""
     import tempfile

@@ -55,13 +55,44 @@ class ExtractedDocument:
         }
 
 
+def detect_file_type(path: Path) -> str:
+    """ファイルの中身から種別を判定する。
+
+    官公需APIの添付ファイル名は「通常はリンク文字列」(APIガイド4.2)であり、
+    「入札公告」「仕様書」のように拡張子を持たない。拡張子で判定すると
+    すべてPDF以外とみなされてしまうため、先頭バイトで判定する。
+    """
+    try:
+        with open(path, "rb") as f:
+            head = f.read(512)
+    except OSError:
+        return "unreadable"
+
+    if head.startswith(b"%PDF-"):
+        return "pdf"
+    if head.startswith(b"PK\x03\x04"):
+        return "zip"  # docx/xlsx/zip
+    if head.startswith(b"\xd0\xcf\x11\xe0"):
+        return "ole"  # 旧Office形式 (doc/xls)
+    lowered = head.lstrip().lower()
+    if lowered.startswith((b"<!doctype html", b"<html", b"<?xml")):
+        return "html"
+    return "unknown"
+
+
 def extract_pdf_text(pdf_path: Path) -> ExtractedDocument:
     """PDFからページ単位でテキストを抽出する。失敗しても例外を投げない。"""
     doc = ExtractedDocument(file_name=pdf_path.name, source_path=str(pdf_path))
 
-    if pdf_path.suffix.lower() != ".pdf":
+    file_type = detect_file_type(pdf_path)
+    if file_type != "pdf":
         doc.status = "unsupported"
-        doc.note = f"PDF以外のファイル形式です: {pdf_path.suffix}"
+        doc.note = {
+            "html": "PDFではなくHTMLページでした(添付URLが案内ページを指している可能性)",
+            "zip": "PDFではなくZIP/Office形式(docx等)のファイルでした",
+            "ole": "PDFではなく旧Office形式(doc/xls)のファイルでした",
+            "unreadable": "ファイルを読み取れませんでした",
+        }.get(file_type, "PDF形式ではないファイルでした")
         return doc
 
     try:

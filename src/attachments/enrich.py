@@ -139,21 +139,33 @@ def enrich_opportunity(
     notes = [d["note"] for d in cached if d.get("note")]
 
     if total_chars == 0:
+        # 「テキストが無い」の理由は複数ある(PDFではない/画像スキャン/解析失敗)。
+        # 一律にemptyとせず、実際の理由が分かるようにする。
+        file_statuses = [d.get("status") for d in cached]
+        if all(s == "unsupported" for s in file_statuses):
+            status = "not_pdf"
+        elif any(s == "failed" for s in file_statuses):
+            status = "failed"
+        else:
+            status = "empty"
+
         _update_scores(
             conn,
             opportunity_id,
             {},
-            spec_text_status="empty",
+            spec_text_status=status,
             spec_text_chars=0,
             spec_text_pages=total_pages,
-            spec_text_note="; ".join(notes) or "テキストを抽出できませんでした(画像PDFの可能性)",
+            spec_text_note="; ".join(notes) or "テキストを抽出できませんでした",
             scored_with_spec_text=False,
         )
         return {
             "id": opportunity_id,
-            "status": "empty",
+            "status": status,
             "score_before": score_before,
             "pages": total_pages,
+            "note": "; ".join(notes[:2]),
+            "files": [d.get("file_name") for d in cached],
         }
 
     # 案件名・公告文に加えて仕様書本文も対象に再スコアリングする
