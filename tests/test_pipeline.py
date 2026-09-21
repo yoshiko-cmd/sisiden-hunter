@@ -291,6 +291,34 @@ def test_shared_listing_page_does_not_leak_between_cases():
     assert genuine.anchor_source == "title"
 
 
+def test_equipment_procurement_is_excluded():
+    """機器・システムの調達は「映像」「動画」を含んでも制作案件ではない。
+
+    実データで上位に並んだ実例。いずれも制作の仕事ではなく物品調達・保守。
+    """
+    from src.scoring.scorer import score_fields
+
+    for title in [
+        "【中央病院】循環器動画ファイリングシステム",
+        "携帯映像伝送システム賃貸借契約",
+        "映像音響設備 一式",
+        "動画編集用ノートパソコン等調達に係る条件付き一般競争入札",
+        "競技映像撮影システム等の定期点検等業務委託",
+        "手術室映像記録システム 一式",
+        "医療動画像対応アノテーション半自動作成ツールの新規開発",
+        "スポーツ医科学動作分析及び映像サポート関連機器一式調達",
+        "森林ふれあい学習館等映像展示機器更新業務委託",
+    ]:
+        result = score_fields(title)
+        assert result.keyword_score == 0, f"機器調達が{result.keyword_score}点になった: {title}"
+        assert result.matches["video_match"] is False
+
+    # 制作を伴う案件は、調達語を含んでいても除外しない
+    with_production = score_fields("募集広報用パンフレット及びPR動画の企画・制作・印刷製本等")
+    assert with_production.keyword_score > 0
+    assert with_production.matches["video_match"] is True
+
+
 def test_url_encoded_project_name_is_decoded():
     """案件名がURLエンコードされたまま入っている場合にデコードすること。"""
     from src.collectors.kkj import decode_project_name

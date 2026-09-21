@@ -66,6 +66,16 @@ def _find_matches(text: str, words: list[str]) -> list[str]:
     return [w for w in words if w and w.lower() in lowered]
 
 
+def _is_procurement(title: str, keywords: dict) -> bool:
+    """機器・システムの調達案件か判定する(制作を伴う案件は除く)。"""
+    rule = keywords.get("procurement_exclusion")
+    if not rule:
+        return False
+    if not _find_matches(title, rule.get("words", [])):
+        return False
+    return not _find_matches(title, rule.get("production_words", []))
+
+
 def find_anchor(title: str, spec_text: str, keywords: dict) -> tuple[list[str], str | None]:
     """映像制作案件である裏付けを探す。
 
@@ -108,6 +118,13 @@ def score_fields(
     anchor_words, anchor_source = find_anchor(title, spec_text, keywords)
     has_anchor = bool(anchor_words)
 
+    # 機器調達・システム導入は「映像」「動画」を含んでも制作の仕事ではない。
+    # 案件名に制作系の語が無ければ対象外とする。
+    if has_anchor and _is_procurement(title, keywords):
+        has_anchor = False
+        anchor_words = []
+        anchor_source = None
+
     # 裏付けがあれば仕様書本文も加点対象にする。無ければ案件名のみ。
     scoring_text = f"{title}\n{spec_text}" if has_anchor else title
     max_score = 100 if has_anchor else keywords.get("no_anchor_max_score", 30)
@@ -117,6 +134,14 @@ def score_fields(
     raw_score = 0
 
     for group_key, group_def in keywords["groups"].items():
+        # 裏付けが無い案件は映像案件ではないため、映像・ドキュメンタリーの加点をしない。
+        # (「映像音響設備」「動画ファイリングシステム」のような機器調達が
+        #  案件名の「映像」「動画」だけで加点されてしまうため)
+        if not has_anchor and group_key in ("video", "documentary"):
+            matches[GROUP_TO_DB_FLAG[group_key]] = False
+            matched_words[group_key] = []
+            continue
+
         found = _find_matches(scoring_text, group_def["words"])
         flag_name = GROUP_TO_DB_FLAG.get(group_key, f"{group_key}_match")
         matches[flag_name] = bool(found)
