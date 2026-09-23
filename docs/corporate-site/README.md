@@ -14,8 +14,10 @@ SISIDEN MEDIAの設計は [`docs/sisiden-media/`](../sisiden-media/README.md) �
 | 1 | [01-audit-and-strategy.md](./01-audit-and-strategy.md) | 現状分析・SEO課題・検索戦略 |
 | 2 | [02-site-structure-and-b2b.md](./02-site-structure-and-b2b.md) | 新サイトマップ・B2Bコンテンツ設計 |
 | 3 | [03-studio-update-checklist.md](./03-studio-update-checklist.md) | **STUDIO改修チェックリスト（優先度順）** |
+| 4 | [04-government-page-copy.md](./04-government-page-copy.md) | **`/government/` ページ原稿（STUDIOに貼れる状態）** |
 
 急ぐ場合は **3から読む。**
+いますぐ手を動かすなら **4**（自治体向けページの原稿一式）。
 
 ---
 
