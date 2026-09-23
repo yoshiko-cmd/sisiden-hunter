@@ -218,6 +218,14 @@ python tests/test_media.py                       # テスト19件
 STUDIO CMSにはエクスポート機能がないため、`content/` を正本のミラーとして保持し、
 そこからSTUDIOへの投入用ファイル・JSON-LD・配信APIを生成する構成にしています。
 
+## コーポレートサイト改善(B2B・SEO)
+
+sisicreation.com を企業・自治体向けの受注につながるサイトに改善するための
+分析と実行計画です。
+
+- [`docs/corporate-site/`](docs/corporate-site/README.md)
+- 急ぐ場合は [STUDIO改修チェックリスト](docs/corporate-site/03-studio-update-checklist.md) から
+
 ## Phase 2/3(未実装、設計のみ意識)
 
 - PPTX生成(`create_slide_spec` / `render_pptx` / `render_slide_preview`)
