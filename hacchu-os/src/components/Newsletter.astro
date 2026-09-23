@@ -1,0 +1,25 @@
+---
+import site from "../data/site.json";
+interface Props {
+  source: string;
+}
+const { source } = Astro.props;
+const enabled = Boolean(site.newsletterEndpoint);
+---
+<section class="box newsletter no-print" aria-labelledby="nl-title">
+  <h2 id="nl-title" style="margin-top:0;border:0;padding:0;font-size:1.1rem">外注で失敗しない「発注前チェックリスト」(無料)</h2>
+  <p class="small">発注の前に決めること・相手に伝えることを1枚にまとめました。PDFとスプレッドシート版をメールでお送りします。</p>
+  {enabled ? (
+    <form method="post" action={site.newsletterEndpoint} class="form-grid">
+      <input type="hidden" name="source" value={source} />
+      <label class="field">メールアドレス
+        <input type="email" name="email" required autocomplete="email" />
+      </label>
+      <p class="small muted">登録すると、<a href="/policy/privacy/">プライバシーポリシー</a>に同意したものとみなします。配信はいつでも停止できます。</p>
+      <button class="btn" type="submit">チェックリストを受け取る</button>
+    </form>
+  ) : (
+    <p class="small">メールでの配布は準備中です。いまはWeb版をそのまま使えます(登録不要)。</p>
+    <a class="btn btn-outline" href="/tools/checklist/">Web版のチェックリストを開く</a>
+  )}
+</section>

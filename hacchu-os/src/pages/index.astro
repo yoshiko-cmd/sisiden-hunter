@@ -1,0 +1,81 @@
+---
+import Base from "../layouts/Base.astro";
+import Newsletter from "../components/Newsletter.astro";
+import site from "../data/site.json";
+import categories from "../data/categories.json";
+import { getArticles, tools } from "../lib/content";
+
+const articles = await getArticles();
+const steps = ["探す", "比較する", "面談する", "選ぶ", "契約する", "発注する", "進行管理する", "納品", "支払う", "評価する", "継続/終了"];
+const featured = ["company-vs-freelance", "interview-questions", "freelance-act-for-clients", "purchase-order-items", "revision-rules"]
+  .map((id) => articles.find((a) => a.id === id))
+  .filter((a) => a !== undefined);
+---
+<Base title={site.name} description={site.description}>
+  <section class="container-wide hero">
+    <h1>「誰に頼めばいいか分からない」を、<br />手順で解決する。</h1>
+    <p>{site.description}</p>
+    <ol class="flow" aria-label="発注の流れ">
+      {steps.map((s) => <li>{s}</li>)}
+    </ol>
+    <p style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn" href="/tools/diagnosis/">どこに頼むべきか診断する</a>
+      <a class="btn btn-outline" href="/tools/checklist/">発注前チェックリスト</a>
+    </p>
+  </section>
+
+  <section class="container-wide">
+    <h2>まず読む</h2>
+    <div class="cards">
+      {featured.map((a) => (
+        <a class="card" href={`/articles/${a.id}/`}>
+          <span class="tag">{categories.find((c) => c.slug === a.data.category)?.name}</span>
+          <h3>{a.data.title}</h3>
+          <p>{a.data.description}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="container-wide">
+    <h2>無料ツール</h2>
+    <p class="muted small">入力内容はお使いのブラウザの中だけで処理し、サーバーには送りません。</p>
+    <div class="cards">
+      {tools.map((t) => (
+        <a class="card" href={`/tools/${t.slug}/`}>
+          <h3>{t.name}</h3>
+          <p>{t.description}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="container-wide">
+    <h2>目的から探す</h2>
+    <div class="cards">
+      {categories.map((c) => (
+        <a class="card" href={`/category/${c.slug}/`}>
+          <h3>{c.name}</h3>
+          <p>{c.description}</p>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <section class="container-wide">
+    <h2>このサイトについて</h2>
+    <p>
+      「フリーランスになる方法」の情報はたくさんあります。でも、<strong>フリーランスや外注先をどう選び、どう一緒に仕事をすればうまくいくのか</strong>を、
+      発注する側の目線で最初から最後まで説明している場所はほとんどありません。
+    </p>
+    <p>
+      発注OSは、映像制作をはじめ多くの外部の人と仕事をしてきた{site.company}が運営しています。
+      体験にもとづく判断の基準と、公的機関の一次情報にもとづく契約・支払いの手順を、テンプレートやツールと一緒に提供します。
+      <a href="/about/">運営会社について</a> / <a href="/policy/editorial/">編集方針</a>
+    </p>
+  </section>
+
+  <div class="container-wide">
+    <Newsletter source="home" />
+  </div>
+</Base>

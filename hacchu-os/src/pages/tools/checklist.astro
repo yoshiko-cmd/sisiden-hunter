@@ -1,0 +1,116 @@
+---
+import Tool from "../../layouts/Tool.astro";
+
+const sections = [
+  {
+    title: "1. 探す前に決める",
+    items: [
+      "何のために作るのか(目的)を一文で書ける",
+      "誰に見せる・使ってもらうのかが決まっている",
+      "成果物の形(種類・長さ・点数・納品形式)を書ける",
+      "いつまでに必要か(公開日から逆算した納期)が決まっている",
+      "予算の上限を社内で決めている",
+      "社内で最終OKを出す人が決まっている",
+      "社内で用意するもの(素材・情報・人の調整)を把握している",
+    ],
+  },
+  {
+    title: "2. 探す・選ぶ",
+    items: [
+      "頼み方(制作会社/フリーランス/クラウドソーシング/エージェント/知人)を比べた",
+      "候補を2人(社)以上見た",
+      "ポートフォリオで、候補者が担当した範囲を確認した",
+      "面談で、こちらの目的について質問してくるかを見た",
+      "見積の内訳(何にいくらか)を確認した",
+      "修正が何回まで含まれるかを確認した",
+      "連絡手段と、返信の目安の時間を確認した",
+    ],
+  },
+  {
+    title: "3. 発注する(書面・メールで明示)",
+    items: [
+      "発注者と受注者の名称",
+      "業務委託をした日",
+      "成果物・作業の内容",
+      "納品の期日と、納品の場所・方法",
+      "検査(確認)をする場合は、その完了日",
+      "報酬の額(税込か税抜か)",
+      "支払期日(受け取りから60日以内のできるだけ早い日)",
+      "支払方法",
+      "修正の回数と範囲",
+      "著作権・利用範囲、制作実績としての公開の可否",
+      "秘密情報の扱い(必要ならNDA)",
+    ],
+  },
+  {
+    title: "4. 進める",
+    items: [
+      "キックオフで目的・見る人・判断者を共有した",
+      "途中確認の日(初稿など)をカレンダーに入れた",
+      "修正の指示は、まとめて1回で出す人を決めた",
+      "連絡が止まったときに誰が何日で確認するか決めた",
+    ],
+  },
+  {
+    title: "5. 受け取る・支払う・振り返る",
+    items: [
+      "納品物を期日までに確認した",
+      "支払期日までに支払った(源泉徴収の要否も確認した)",
+      "よかった点・次に変えたい点を相手に伝えた",
+      "次も頼むか、どう頼むかを記録した",
+    ],
+  },
+];
+---
+<Tool slug="checklist">
+  <p>
+    チェックはこのブラウザに保存されるので、発注ごとに途中から続けられます。印刷してPDFにもできます。
+    3の項目は、フリーランス法で発注時に明示が必要とされる事項をもとにしています(<a href="/articles/freelance-act-for-clients/">解説</a>)。
+  </p>
+  <p id="cl-progress" class="box box-summary" aria-live="polite"></p>
+
+  <form id="cl-form" onsubmit="return false">
+    {sections.map((s, si) => (
+      <fieldset style="margin-bottom:16px">
+        <legend>{s.title}</legend>
+        {s.items.map((item, ii) => (
+          <label style="display:flex;gap:10px;align-items:flex-start;margin:8px 0;font-size:0.95rem;line-height:1.6">
+            <input type="checkbox" name={`c_${si}_${ii}`} style="margin-top:5px;width:18px;height:18px;flex:none" />
+            <span>{item}</span>
+          </label>
+        ))}
+      </fieldset>
+    ))}
+  </form>
+
+  <p class="no-print" style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn" type="button" onclick="window.print()">印刷・PDFで保存</button>
+    <button class="btn btn-outline" type="button" id="cl-clear">チェックをすべて外す</button>
+  </p>
+  <p>発注メールの下書きは<a href="/tools/brief-generator/">発注内容整理ジェネレーター</a>で作れます。</p>
+
+  <script>
+    const KEY = "hacchu-os:checklist";
+    const form = document.getElementById("cl-form") as HTMLFormElement;
+    const progress = document.getElementById("cl-progress")!;
+    const boxes = Array.from(form.querySelectorAll<HTMLInputElement>("input[type=checkbox]"));
+
+    function render() {
+      const done = boxes.filter((b) => b.checked).length;
+      progress.textContent = `${boxes.length}項目中 ${done}項目 完了`;
+      try {
+        localStorage.setItem(KEY, JSON.stringify(boxes.filter((b) => b.checked).map((b) => b.name)));
+      } catch {}
+    }
+    try {
+      const saved: string[] = JSON.parse(localStorage.getItem(KEY) || "[]");
+      boxes.forEach((b) => (b.checked = saved.includes(b.name)));
+    } catch {}
+    form.addEventListener("change", render);
+    document.getElementById("cl-clear")!.addEventListener("click", () => {
+      boxes.forEach((b) => (b.checked = false));
+      render();
+    });
+    render();
+  </script>
+</Tool>

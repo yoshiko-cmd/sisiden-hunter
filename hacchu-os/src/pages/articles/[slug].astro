@@ -1,0 +1,132 @@
+---
+import { render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import AdNotice from "../../components/AdNotice.astro";
+import ToolCta from "../../components/ToolCta.astro";
+import Newsletter from "../../components/Newsletter.astro";
+import site from "../../data/site.json";
+import { getArticles, getCategory, formatDate, isoDate, type Article } from "../../lib/content";
+
+export async function getStaticPaths() {
+  const articles = await getArticles();
+  return articles.map((article) => ({ params: { slug: article.id }, props: { article, articles } }));
+}
+
+interface Props {
+  article: Article;
+  articles: Article[];
+}
+const { article, articles } = Astro.props;
+const { data } = article;
+const { Content } = await render(article);
+const category = getCategory(data.category);
+const related = data.related
+  .map((id) => articles.find((a) => a.id === id))
+  .filter((a): a is Article => Boolean(a));
+
+const url = new URL(Astro.url.pathname, Astro.site).href;
+const jsonLd: object[] = [
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: data.title,
+    description: data.description,
+    datePublished: isoDate(data.published),
+    dateModified: isoDate(data.updated),
+    author: { "@type": "Organization", name: data.author },
+    publisher: { "@type": "Organization", name: site.company },
+    mainEntityOfPage: url,
+    citation: data.sources.map((s) => s.url),
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: site.name, item: new URL("/", Astro.site).href },
+      ...(category
+        ? [{ "@type": "ListItem", position: 2, name: category.name, item: new URL(`/category/${category.slug}/`, Astro.site).href }]
+        : []),
+      { "@type": "ListItem", position: category ? 3 : 2, name: data.title, item: url },
+    ],
+  },
+];
+if (data.faq.length) {
+  jsonLd.push({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: data.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+  });
+}
+---
+<Base title={data.title} description={data.description} jsonLd={jsonLd} noindex={data.draft}>
+  <article class="container prose">
+    <nav class="breadcrumbs" aria-label="パンくずリスト">
+      <a href="/">トップ</a>
+      {category && <> › <a href={`/category/${category.slug}/`}>{category.name}</a></>}
+    </nav>
+    {data.draft && <div class="box box-warn"><strong>草稿</strong>(本番には公開されません)</div>}
+    <h1>{data.title}</h1>
+    <div class="meta">
+      <span>更新日: <time datetime={isoDate(data.updated)}>{formatDate(data.updated)}</time></span>
+      <span>公開日: <time datetime={isoDate(data.published)}>{formatDate(data.published)}</time></span>
+      <span>執筆: {data.author}</span>
+      {data.reviewer && <span>監修: {data.reviewer}</span>}
+    </div>
+
+    {data.hasAds && <AdNotice />}
+
+    {data.expertReview === "recommended" && (
+      <div class="box box-warn" role="note">
+        <strong>[専門家レビュー推奨]</strong> この記事は法律・税務に関わる一般的な情報です。
+        個別の取引が法律に適合するかどうかの判断は、弁護士・税理士などの専門家にご相談ください。
+        制度の内容は、出典に挙げた公的機関の資料で最新のものをご確認ください。
+      </div>
+    )}
+
+    <div class="box box-summary">
+      <p class="label">結論</p>
+      <p>{data.summary}</p>
+    </div>
+
+    <Content />
+
+    {data.faq.length > 0 && (
+      <section>
+        <h2>よくある質問</h2>
+        <dl class="faq">
+          {data.faq.map((f) => (<><dt>{f.q}</dt><dd>{f.a}</dd></>))}
+        </dl>
+      </section>
+    )}
+
+    {data.tools.map((slug) => <ToolCta slug={slug} />)}
+
+    {data.sources.length > 0 && (
+      <section>
+        <h2>出典・参考資料</h2>
+        <ul class="small">
+          {data.sources.map((s) => (
+            <li><a href={s.url} rel="noopener" target="_blank">{s.title}</a>({s.publisher})</li>
+          ))}
+        </ul>
+        <p class="small muted">内容に誤りを見つけた場合は<a href="/contact/">情報訂正窓口</a>からお知らせください。</p>
+      </section>
+    )}
+
+    {related.length > 0 && (
+      <section>
+        <h2>次に読む</h2>
+        <div class="cards">
+          {related.map((r) => (
+            <a class="card" href={`/articles/${r.id}/`}>
+              <h3>{r.data.title}</h3>
+              <p>{r.data.description}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <Newsletter source={`article:${article.id}`} />
+  </article>
+</Base>

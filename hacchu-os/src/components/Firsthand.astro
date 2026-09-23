@@ -1,0 +1,11 @@
+---
+// 運営者の一次情報が未取得の箇所。事実を創作しないために、枠だけを表示する。
+interface Props {
+  topic: string;
+}
+const { topic } = Astro.props;
+---
+<div class="firsthand-placeholder" role="note">
+  <strong>[運営者一次情報追加予定]</strong> {topic}
+  <br /><span class="small muted">運営者への聞き取りのあとに追記します。聞き取る前にエピソードや数字を補うことはしません。</span>
+</div>

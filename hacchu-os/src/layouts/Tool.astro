@@ -1,0 +1,29 @@
+---
+import Base from "./Base.astro";
+import Newsletter from "../components/Newsletter.astro";
+import { tools } from "../lib/content";
+interface Props {
+  slug: string;
+}
+const { slug } = Astro.props;
+const tool = tools.find((t) => t.slug === slug)!;
+const ld = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: tool.name,
+  description: tool.description,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "JPY" },
+};
+---
+<Base title={`${tool.name}(無料)`} description={tool.description} jsonLd={[ld]}>
+  <div class="container prose">
+    <nav class="breadcrumbs" aria-label="パンくずリスト"><a href="/">トップ</a> › <a href="/tools/">無料ツール</a></nav>
+    <h1>{tool.name}</h1>
+    <p class="muted">{tool.description}</p>
+    <p class="small muted no-print">入力内容はこのブラウザの中だけで処理し、サーバーには送りません。</p>
+    <slot />
+    <Newsletter source={`tool:${slug}`} />
+  </div>
+</Base>

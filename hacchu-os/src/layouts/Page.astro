@@ -1,0 +1,17 @@
+---
+import Base from "./Base.astro";
+interface Props {
+  title: string;
+  description?: string;
+  updated?: string;
+}
+const { title, description, updated } = Astro.props;
+---
+<Base title={title} description={description}>
+  <div class="container prose">
+    <nav class="breadcrumbs" aria-label="パンくずリスト"><a href="/">トップ</a> › {title}</nav>
+    <h1>{title}</h1>
+    {updated && <p class="meta">最終更新: {updated}</p>}
+    <slot />
+  </div>
+</Base>

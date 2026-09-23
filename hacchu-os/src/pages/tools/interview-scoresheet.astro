@@ -1,0 +1,117 @@
+---
+import Tool from "../../layouts/Tool.astro";
+
+const criteria = [
+  { id: "questions", name: "質問力", hint: "こちらの目的・見る人・使い道を質問してきたか" },
+  { id: "communication", name: "コミュニケーション", hint: "話が噛み合うか。返信の速さと分かりやすさ" },
+  { id: "expertise", name: "専門性", hint: "今回の仕事に必要な技術・経験があるか" },
+  { id: "track", name: "実績", hint: "今回に近い仕事を、どの役割で担当したか説明できるか" },
+  { id: "schedule", name: "納期感覚", hint: "無理な日程に対して、根拠のある代案を出せるか" },
+  { id: "explain", name: "説明力", hint: "見積や進め方の理由を、専門用語なしで説明できるか" },
+  { id: "risk", name: "リスクの低さ", hint: "連絡の途絶・体調・掛け持ちの多さなどの不安が少ないか" },
+];
+---
+<Tool slug="interview-scoresheet">
+  <p>
+    面談の直後に、候補者ごとに1〜5点で付けてください。重みは今回の仕事で大事な観点ほど大きくします。
+    面談で何を聞けばいいかは<a href="/articles/interview-questions/">フリーランス面談で聞く質問リスト</a>にまとめています。
+  </p>
+
+  <form id="score-form" onsubmit="return false">
+    <div class="row-2">
+      <label class="field">候補者1<input type="text" name="name0" placeholder="名前(社内用)" /></label>
+      <label class="field">候補者2<input type="text" name="name1" /></label>
+      <label class="field">候補者3<input type="text" name="name2" /></label>
+    </div>
+    <table style="margin-top:16px">
+      <thead>
+        <tr><th>観点</th><th>重み</th><th>候補者1</th><th>候補者2</th><th>候補者3</th></tr>
+      </thead>
+      <tbody>
+        {criteria.map((c) => (
+          <tr>
+            <th>{c.name}<br /><span class="small muted" style="font-weight:400">{c.hint}</span></th>
+            <td>
+              <select name={`w_${c.id}`} aria-label={`${c.name}の重み`}>
+                <option value="1">1</option><option value="2" selected>2</option><option value="3">3</option>
+              </select>
+            </td>
+            {[0, 1, 2].map((i) => (
+              <td>
+                <select name={`s_${c.id}_${i}`} aria-label={`${c.name} 候補者${i + 1}`}>
+                  <option value="">—</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+                </select>
+              </td>
+            ))}
+          </tr>
+        ))}
+        <tr>
+          <th>メモ</th>
+          <td></td>
+          {[0, 1, 2].map((i) => (
+            <td><textarea name={`memo_${i}`} aria-label={`候補者${i + 1}のメモ`} style="min-width:9em"></textarea></td>
+          ))}
+        </tr>
+      </tbody>
+    </table>
+  </form>
+
+  <div class="result" id="score-result" aria-live="polite"></div>
+  <p class="no-print" style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn" type="button" onclick="window.print()">印刷・PDFで保存</button>
+    <button class="btn btn-outline" type="button" id="score-clear">入力を消去</button>
+  </p>
+
+  <div class="box box-note small">
+    <p><strong>点数だけで決めない</strong></p>
+    <p>
+      合計点が近いときは、いきなり本番を頼まずに小さな有償の仕事(トライアル)を頼んで比べる方法があります。
+      「リスクの低さ」が2点以下の候補者は、合計点が高くても慎重に判断してください。
+    </p>
+  </div>
+
+  <script define:vars={{ criteria }}>
+    const KEY = "hacchu-os:scoresheet";
+    const form = document.getElementById("score-form");
+    const out = document.getElementById("score-result");
+
+    function values() {
+      return Object.fromEntries(Array.from(form.elements).filter((el) => el.name).map((el) => [el.name, el.value]));
+    }
+
+    function render() {
+      const v = values();
+      try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {}
+      const results = [0, 1, 2].map((i) => {
+        let sum = 0, max = 0, answered = 0;
+        for (const c of criteria) {
+          const w = Number(v[`w_${c.id}`] || 1);
+          const s = v[`s_${c.id}_${i}`];
+          if (s) { sum += Number(s) * w; max += 5 * w; answered++; }
+        }
+        const risk = Number(v[`s_risk_${i}`] || 0);
+        return { name: v[`name${i}`] || `候補者${i + 1}`, pct: max ? Math.round((sum / max) * 100) : null, answered, risk };
+      });
+      out.innerHTML =
+        "<p><strong>重み付きの達成率</strong>(採点した観点だけで計算)</p><ul>" +
+        results.map((r) =>
+          `<li>${r.name}: ${r.pct === null ? "未採点" : r.pct + "%"}` +
+          (r.answered && r.answered < criteria.length ? `(${r.answered}/${criteria.length}観点)` : "") +
+          (r.risk && r.risk <= 2 ? " ⚠️ リスクの低さが2点以下" : "") + "</li>"
+        ).join("") + "</ul>";
+    }
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (saved) for (const [k, val] of Object.entries(saved)) { const el = form.elements.namedItem(k); if (el) el.value = val; }
+    } catch {}
+    form.addEventListener("input", render);
+    form.addEventListener("change", render);
+    document.getElementById("score-clear").addEventListener("click", () => {
+      form.reset();
+      try { localStorage.removeItem(KEY); } catch {}
+      render();
+    });
+    render();
+  </script>
+</Tool>

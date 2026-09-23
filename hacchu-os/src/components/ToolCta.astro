@@ -1,0 +1,15 @@
+---
+import { tools } from "../lib/content";
+interface Props {
+  slug: string;
+  text?: string;
+}
+const { slug, text } = Astro.props;
+const tool = tools.find((t) => t.slug === slug);
+if (!tool) throw new Error(`tool ${slug} not found`);
+---
+<div class="box box-note no-print">
+  <p><strong>無料ツール: {tool.name}</strong></p>
+  <p class="small">{text ?? tool.description}</p>
+  <a class="btn" href={`/tools/${tool.slug}/`}>{tool.name}を使う</a>
+</div>

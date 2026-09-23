@@ -1,0 +1,126 @@
+---
+import Tool from "../../layouts/Tool.astro";
+---
+<Tool slug="cost-simulator">
+  <div class="box box-note small">
+    <p>
+      最初に入っている数字は<strong>計算の仕方を示すための入力例で、相場ではありません</strong>。
+      自社の給与水準や、実際にもらった見積の金額に書き換えてください。
+    </p>
+  </div>
+
+  <form id="cost-form" class="form-grid" onsubmit="return false">
+    <fieldset>
+      <legend>共通</legend>
+      <div class="row-2">
+        <label class="field">比べる期間(か月)<input type="number" name="months" value="12" min="1" max="60" /></label>
+        <label class="field">1か月に頼みたい件数<input type="number" name="jobs" value="2" min="0" step="0.5" />
+          <span class="hint">例: 動画2本/月、記事8本/月</span></label>
+        <label class="field">自社の担当者の時給換算(円)<input type="number" name="ownRate" value="3000" min="0" step="100" />
+          <span class="hint">指示・確認に使う時間のコスト</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>A. 社員を採用する</legend>
+      <div class="row-2">
+        <label class="field">月給(万円)<input type="number" name="salary" value="30" min="0" step="0.5" /></label>
+        <label class="field">給与以外の会社負担(%)<input type="number" name="burden" value="15" min="0" max="100" />
+          <span class="hint">社会保険料などの会社負担。自社の実額に合わせて入力</span></label>
+        <label class="field">賞与(か月分/年)<input type="number" name="bonus" value="0" min="0" step="0.5" /></label>
+        <label class="field">採用にかかる費用(万円・初回のみ)<input type="number" name="hiring" value="0" min="0" /></label>
+        <label class="field">機材・ソフト等(万円/月)<input type="number" name="equip" value="1" min="0" step="0.1" /></label>
+        <label class="field">育成・管理に使う時間(時間/月)<input type="number" name="empMgmt" value="10" min="0" /></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>B. 制作会社に頼む</legend>
+      <div class="row-2">
+        <label class="field">1件あたりの見積(万円)<input type="number" name="agencyPrice" value="30" min="0" step="0.5" /></label>
+        <label class="field">1件あたりの指示・確認時間(時間)<input type="number" name="agencyHours" value="3" min="0" step="0.5" /></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>C. フリーランスに頼む</legend>
+      <div class="row-2">
+        <label class="field">1件あたりの見積(万円)<input type="number" name="flPrice" value="15" min="0" step="0.5" /></label>
+        <label class="field">1件あたりの指示・確認時間(時間)<input type="number" name="flHours" value="6" min="0" step="0.5" />
+          <span class="hint">ディレクションを自社で持つ分、会社より多くなりがち</span></label>
+        <label class="field">探す・面談する時間(時間・初回のみ)<input type="number" name="flSearch" value="15" min="0" /></label>
+      </div>
+    </fieldset>
+  </form>
+
+  <div class="result" id="cost-result" aria-live="polite"></div>
+
+  <h2>数字だけで決めないための観点</h2>
+  <table>
+    <thead><tr><th></th><th>社員</th><th>制作会社</th><th>フリーランス</th></tr></thead>
+    <tbody>
+      <tr><th>仕事の量が月によって変わる</th><td>空いた時間も費用がかかる</td><td>頼んだ分だけ</td><td>頼んだ分だけ</td></tr>
+      <tr><th>進行管理を誰が持つか</th><td>自社</td><td>主に会社側(ディレクター)</td><td>自社が持つことが多い</td></tr>
+      <tr><th>担当が急にいなくなったとき</th><td>引き継ぎは社内で可能</td><td>会社内で交代できることが多い</td><td>代わりがいないことがある</td></tr>
+      <tr><th>ノウハウが社内に残るか</th><td>残る</td><td>残りにくい</td><td>進め方次第</td></tr>
+      <tr><th>立ち上がりの速さ</th><td>採用に時間がかかる</td><td>速い</td><td>探す時間しだい</td></tr>
+    </tbody>
+  </table>
+  <p>どこに頼むのが合うかは<a href="/tools/diagnosis/">外注先選び診断</a>でも確認できます。考え方は<a href="/articles/company-vs-freelance/">制作会社とフリーランス、どっちに頼む?</a>で解説しています。</p>
+
+  <script>
+    const form = document.getElementById("cost-form") as HTMLFormElement;
+    const out = document.getElementById("cost-result")!;
+    const yen = (v: number) => `${Math.round(v).toLocaleString("ja-JP")}円`;
+
+    function num(name: string): number {
+      const el = form.elements.namedItem(name) as HTMLInputElement;
+      const v = parseFloat(el.value);
+      return Number.isFinite(v) && v >= 0 ? v : 0;
+    }
+
+    function calc() {
+      const months = Math.max(1, num("months"));
+      const jobs = num("jobs") * months;
+      const rate = num("ownRate");
+      const man = 10000;
+
+      const monthlySalary = num("salary") * man;
+      const employee =
+        monthlySalary * months * (1 + num("burden") / 100) +
+        monthlySalary * num("bonus") * (months / 12) * (1 + num("burden") / 100) +
+        num("hiring") * man +
+        num("equip") * man * months +
+        num("empMgmt") * rate * months;
+
+      const agency = jobs * (num("agencyPrice") * man + num("agencyHours") * rate);
+      const freelance = jobs * (num("flPrice") * man + num("flHours") * rate) + num("flSearch") * rate;
+
+      const rows: [string, number][] = [
+        ["A. 社員を採用する", employee],
+        ["B. 制作会社に頼む", agency],
+        ["C. フリーランスに頼む", freelance],
+      ];
+      const min = Math.min(...rows.map((r) => r[1]));
+      const perJob = (v: number) => (jobs > 0 ? yen(v / jobs) : "—");
+
+      out.innerHTML = `
+        <p><strong>${months}か月・合計${jobs}件</strong>で比べた場合(自社の時間コストを含む)</p>
+        <table>
+          <thead><tr><th>頼み方</th><th>期間の合計</th><th>1件あたり</th></tr></thead>
+          <tbody>
+            ${rows
+              .map(
+                ([label, v]) =>
+                  `<tr><th>${label}${v === min ? " <span class='tag'>最も安い</span>" : ""}</th><td>${yen(v)}</td><td>${perJob(v)}</td></tr>`,
+              )
+              .join("")}
+          </tbody>
+        </table>
+        <p class="small muted">社員の費用は、この仕事以外にも時間を使える点を含んでいません。件数が少ないほど社員は割高に、件数が多いほど割安になります。</p>`;
+    }
+
+    form.addEventListener("input", calc);
+    calc();
+  </script>
+</Tool>

@@ -1,0 +1,13 @@
+{
+  "_comment": "広告・紹介リンクの台帳。url が空のものはリンクを出さない(ASP未登録のため)。報酬・料金は公式/ASPで確認した値だけを verifiedAt と一緒に書く。",
+  "offers": [
+    { "id": "freee-sign", "name": "freeeサイン", "category": "e-contract", "url": "", "program": "freee公式アフィリエイト(条件未確認)", "verifiedAt": "" },
+    { "id": "gmo-sign", "name": "電子印鑑GMOサイン", "category": "e-contract", "url": "", "program": "GMOグローバルサイン・HD アフィリエイト(条件未確認)", "verifiedAt": "" },
+    { "id": "cloudsign", "name": "クラウドサイン", "category": "e-contract", "url": "", "program": "未確認", "verifiedAt": "" },
+    { "id": "freee-accounting", "name": "freee会計", "category": "accounting-saas", "url": "", "program": "未確認", "verifiedAt": "" },
+    { "id": "mf-accounting", "name": "マネーフォワード クラウド会計", "category": "accounting-saas", "url": "", "program": "未確認", "verifiedAt": "" },
+    { "id": "lancers", "name": "ランサーズ", "category": "crowdsourcing", "url": "", "program": "未確認", "verifiedAt": "" },
+    { "id": "crowdworks", "name": "クラウドワークス", "category": "crowdsourcing", "url": "", "program": "未確認", "verifiedAt": "" },
+    { "id": "coconala", "name": "ココナラ", "category": "crowdsourcing", "url": "", "program": "未確認", "verifiedAt": "" }
+  ]
+}

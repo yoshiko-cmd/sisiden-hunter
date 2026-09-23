@@ -1,0 +1,481 @@
+:root {
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface-2: #f2f0ea;
+  --text: #1d1d1b;
+  --text-muted: #5c5a55;
+  --border: #e2dfd6;
+  --accent: #1f5f4a;
+  --accent-weak: #e3efe9;
+  --accent-text: #ffffff;
+  --warn-bg: #fff6e0;
+  --warn-border: #e8c46a;
+  --note-bg: #eef3fb;
+  --note-border: #9bb6e0;
+  --pr: #8a5a00;
+  --radius: 10px;
+  --maxw: 760px;
+  --maxw-wide: 1080px;
+  --font: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", system-ui, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151614;
+    --surface: #1d1f1c;
+    --surface-2: #262925;
+    --text: #ecebe6;
+    --text-muted: #a9a79f;
+    --border: #363a34;
+    --accent: #7cc4a6;
+    --accent-weak: #22342c;
+    --accent-text: #0f1a15;
+    --warn-bg: #2e2716;
+    --warn-border: #8a7232;
+    --note-bg: #1c2433;
+    --note-border: #43587c;
+    --pr: #e0b457;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #151614;
+  --surface: #1d1f1c;
+  --surface-2: #262925;
+  --text: #ecebe6;
+  --text-muted: #a9a79f;
+  --border: #363a34;
+  --accent: #7cc4a6;
+  --accent-weak: #22342c;
+  --accent-text: #0f1a15;
+  --warn-bg: #2e2716;
+  --warn-border: #8a7232;
+  --note-bg: #1c2433;
+  --note-border: #43587c;
+  --pr: #e0b457;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.container-wide {
+  width: 100%;
+  max-width: var(--maxw-wide);
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ヘッダー */
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.site-header .inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  flex-wrap: wrap;
+}
+.brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+.brand small {
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.9rem;
+}
+.site-nav a {
+  color: var(--text);
+  text-decoration: none;
+}
+.site-nav a:hover {
+  color: var(--accent);
+}
+
+/* フッター */
+.site-footer {
+  margin-top: 64px;
+  padding: 32px 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+.site-footer ul {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.site-footer li {
+  margin: 4px 0;
+}
+.site-footer a {
+  color: var(--text-muted);
+}
+
+/* 本文 */
+main {
+  padding-top: 24px;
+}
+h1 {
+  font-size: 1.7rem;
+  line-height: 1.45;
+  margin: 8px 0 12px;
+}
+h2 {
+  font-size: 1.35rem;
+  line-height: 1.5;
+  margin: 44px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border);
+}
+h3 {
+  font-size: 1.12rem;
+  margin: 28px 0 8px;
+}
+.prose table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 16px 0;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  vertical-align: top;
+  min-width: 7em;
+}
+.prose th {
+  background: var(--surface-2);
+  text-align: left;
+}
+.prose blockquote {
+  margin: 16px 0;
+  padding: 8px 16px;
+  border-left: 4px solid var(--border);
+  color: var(--text-muted);
+}
+.prose code {
+  background: var(--surface-2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.prose pre {
+  background: var(--surface-2);
+  padding: 14px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  line-height: 1.6;
+  font-size: 0.88rem;
+}
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+.small {
+  font-size: 0.85rem;
+}
+
+.breadcrumbs {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.breadcrumbs a {
+  color: var(--text-muted);
+}
+
+.meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+/* 注記ボックス */
+.box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 18px 0;
+  background: var(--surface);
+}
+.box-ad {
+  background: var(--surface-2);
+  font-size: 0.88rem;
+}
+.box-warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+}
+.box-note {
+  background: var(--note-bg);
+  border-color: var(--note-border);
+}
+.box-summary {
+  border: 2px solid var(--accent);
+  background: var(--accent-weak);
+}
+.box-summary .label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+.box > :first-child {
+  margin-top: 0;
+}
+.box > :last-child {
+  margin-bottom: 0;
+}
+
+.firsthand-placeholder {
+  border: 2px dashed var(--warn-border);
+  background: var(--warn-bg);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin: 18px 0;
+  font-size: 0.92rem;
+}
+
+.pr-label {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pr);
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 0 5px;
+  margin-right: 6px;
+  vertical-align: 2px;
+  line-height: 1.5;
+}
+
+/* ボタン */
+.btn {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover {
+  filter: brightness(1.08);
+}
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+/* カード */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.card {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+.card:hover {
+  border-color: var(--accent);
+}
+.card h3 {
+  margin: 0 0 6px;
+  font-size: 1.02rem;
+  line-height: 1.5;
+}
+.card p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+.tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 1px 9px;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+}
+
+/* フォーム(ツール) */
+.form-grid {
+  display: grid;
+  gap: 14px;
+}
+label.field {
+  display: grid;
+  gap: 4px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+label.field .hint {
+  font-weight: 400;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+textarea {
+  min-height: 90px;
+  line-height: 1.6;
+}
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px 16px;
+  margin: 0;
+}
+legend {
+  font-weight: 700;
+  padding: 0 6px;
+}
+.result {
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 16px;
+  background: var(--surface);
+  margin-top: 20px;
+}
+.row-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.hero {
+  padding: 36px 0 12px;
+}
+.hero h1 {
+  font-size: 1.9rem;
+}
+.hero p {
+  color: var(--text-muted);
+}
+
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.flow li {
+  background: var(--surface-2);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.faq dt {
+  font-weight: 700;
+  margin-top: 16px;
+}
+.faq dd {
+  margin: 4px 0 0;
+}
+
+@media print {
+  .site-header,
+  .site-footer,
+  .no-print,
+  .newsletter {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 11pt;
+  }
+}

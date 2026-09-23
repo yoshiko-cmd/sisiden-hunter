@@ -1,0 +1,65 @@
+---
+import Base from "../../layouts/Base.astro";
+import categories from "../../data/categories.json";
+import { getArticles, type Article } from "../../lib/content";
+
+export async function getStaticPaths() {
+  const articles = await getArticles();
+  return categories.map((category) => ({
+    params: { slug: category.slug },
+    props: { category, articles: articles.filter((a) => a.data.category === category.slug) },
+  }));
+}
+
+interface Props {
+  category: (typeof categories)[number];
+  articles: Article[];
+}
+const { category, articles } = Astro.props;
+const bySub = (slug: string) => articles.filter((a) => a.data.subcategory === slug);
+const unsorted = articles.filter((a) => !a.data.subcategory || !category.children.some((c) => c.slug === a.data.subcategory));
+---
+<Base title={category.name} description={category.description}>
+  <div class="container-wide">
+    <nav class="breadcrumbs" aria-label="パンくずリスト"><a href="/">トップ</a> › {category.name}</nav>
+    <h1>{category.name}</h1>
+    <p class="muted">{category.description}</p>
+
+    {category.children.length > 0 && (
+      <ul class="flow" aria-label="小カテゴリ">
+        {category.children.map((c) => <li><a href={`#${c.slug}`}>{c.name}</a>({bySub(c.slug).length})</li>)}
+      </ul>
+    )}
+
+    {unsorted.length > 0 && (
+      <div class="cards">
+        {unsorted.map((a) => (
+          <a class="card" href={`/articles/${a.id}/`}>
+            <h3>{a.data.title}</h3>
+            <p>{a.data.description}</p>
+          </a>
+        ))}
+      </div>
+    )}
+
+    {category.children.map((c) => (
+      <section id={c.slug}>
+        <h2>{c.name}</h2>
+        {bySub(c.slug).length ? (
+          <div class="cards">
+            {bySub(c.slug).map((a) => (
+              <a class="card" href={`/articles/${a.id}/`}>
+                <h3>{a.data.title}</h3>
+                <p>{a.data.description}</p>
+              </a>
+            ))}
+          </div>
+        ) : (
+          <p class="muted small">記事を準備中です。</p>
+        )}
+      </section>
+    ))}
+
+    {articles.length === 0 && category.children.length === 0 && <p class="muted">記事を準備中です。</p>}
+  </div>
+</Base>

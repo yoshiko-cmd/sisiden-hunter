@@ -1,0 +1,31 @@
+---
+import Page from "../layouts/Page.astro";
+import site from "../data/site.json";
+const enabled = Boolean(site.contactEndpoint);
+---
+<Page title="お問い合わせ・情報訂正" description="発注OSへのお問い合わせ、記事の誤りのご指摘はこちら。" updated="2026年9月23日">
+  <p>記事の誤り・古くなった情報のご指摘、掲載に関するお問い合わせを受け付けています。</p>
+  <h2>情報訂正のご依頼</h2>
+  <p>次の内容をお知らせいただけると、確認が早くなります。</p>
+  <ul>
+    <li>該当するページのURL</li>
+    <li>誤っている箇所</li>
+    <li>正しい情報と、その根拠(公的機関や公式サイトのURLなど)</li>
+  </ul>
+  <p>確認のうえ訂正し、重要な訂正は記事内に訂正日と内容を記載します。</p>
+  <h2>お問い合わせフォーム</h2>
+  {enabled ? (
+    <form method="post" action={site.contactEndpoint} class="form-grid">
+      <label class="field">お名前<input type="text" name="name" autocomplete="name" /></label>
+      <label class="field">メールアドレス<input type="email" name="email" required autocomplete="email" /></label>
+      <label class="field">種類
+        <select name="kind"><option>情報訂正</option><option>掲載・提携</option><option>その他</option></select>
+      </label>
+      <label class="field">内容<textarea name="message" required></textarea></label>
+      <button class="btn" type="submit">送信する</button>
+    </form>
+  ) : (
+    <p class="box box-note">フォームは準備中です。</p>
+  )}
+  <p class="small muted">広告・提携のご提案もこちらからお送りください。記事の評価や掲載順は広告の有無で変えていません(<a href="/policy/advertising/">広告ポリシー</a>)。</p>
+</Page>

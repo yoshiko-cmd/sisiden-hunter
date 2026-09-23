@@ -1,0 +1,11 @@
+---
+interface Props {
+  type?: "note" | "warn";
+  title?: string;
+}
+const { type = "note", title } = Astro.props;
+---
+<div class={`box box-${type}`}>
+  {title && <p><strong>{title}</strong></p>}
+  <slot />
+</div>

@@ -1,0 +1,19 @@
+---
+import Base from "../../layouts/Base.astro";
+import { tools } from "../../lib/content";
+---
+<Base title="無料ツール・テンプレート" description="外注費の比較、発注メールの下書き、面談の採点、発注前チェック、依頼先の診断。登録不要で使えます。">
+  <div class="container-wide">
+    <nav class="breadcrumbs" aria-label="パンくずリスト"><a href="/">トップ</a> › 無料ツール</nav>
+    <h1>無料ツール・テンプレート</h1>
+    <p class="muted">登録不要。入力内容はお使いのブラウザの中だけで処理し、サーバーには送りません。</p>
+    <div class="cards">
+      {tools.map((t) => (
+        <a class="card" href={`/tools/${t.slug}/`}>
+          <h3>{t.name}</h3>
+          <p>{t.description}</p>
+        </a>
+      ))}
+    </div>
+  </div>
+</Base>

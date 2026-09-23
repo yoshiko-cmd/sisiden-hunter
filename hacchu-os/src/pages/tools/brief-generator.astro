@@ -1,0 +1,189 @@
+---
+import Tool from "../../layouts/Tool.astro";
+---
+<Tool slug="brief-generator">
+  <p>
+    入力すると、そのまま相手に送れる<strong>発注メールの下書き</strong>を作ります。
+    フリーランス法で発注時に明示が必要とされる項目のうち、どれがまだ空欄かも確認できます
+    (<a href="/articles/freelance-act-for-clients/">フリーランス法で発注者がやること</a>)。
+  </p>
+
+  <form id="brief-form" class="form-grid" onsubmit="return false">
+    <fieldset>
+      <legend>だれが・だれに</legend>
+      <div class="row-2">
+        <label class="field">自社名(発注者の名称) *<input type="text" name="client" /></label>
+        <label class="field">担当者名<input type="text" name="clientPerson" /></label>
+        <label class="field">相手の名前(屋号・氏名) *<input type="text" name="vendor" /></label>
+        <label class="field">発注する日 *<input type="date" name="orderDate" /></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>何を・何のために</legend>
+      <label class="field">業務の名前 *<input type="text" name="title" placeholder="例: 採用サイト用インタビュー動画の制作" /></label>
+      <label class="field">目的(なぜ作るか)<textarea name="purpose" placeholder="例: 応募前に社内の雰囲気を知ってもらい、ミスマッチを減らしたい"></textarea></label>
+      <label class="field">見てほしい人<input type="text" name="audience" placeholder="例: 20代の転職希望者" /></label>
+      <label class="field">成果物の内容(形式・長さ・点数など) *<textarea name="deliverable" placeholder="例: 横型動画 2分程度 1本、縦型ショート 30秒 2本。字幕あり"></textarea></label>
+      <label class="field">こちらで用意するもの<input type="text" name="materials" placeholder="例: ロゴデータ、取材対象者の調整、撮影場所" /></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>いつ・どこに</legend>
+      <div class="row-2">
+        <label class="field">初稿の期日<input type="date" name="draftDate" /></label>
+        <label class="field">納品(最終)の期日 *<input type="date" name="dueDate" /></label>
+        <label class="field">納品の方法・場所 *<input type="text" name="deliveryPlace" placeholder="例: 指定の共有フォルダへアップロード" /></label>
+        <label class="field">検査(確認)を終える日<input type="date" name="inspectionDate" />
+          <span class="hint">納品物を確認してOKを出す期限。確認をする場合は明示が必要とされています</span></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>お金</legend>
+      <div class="row-2">
+        <label class="field">報酬の額(円) *<input type="number" name="fee" min="0" /></label>
+        <label class="field">税の扱い<select name="tax"><option value="税抜">税抜(消費税は別途)</option><option value="税込">税込</option></select></label>
+        <label class="field">支払期日 *<input type="date" name="payDate" />
+          <span class="hint">受け取った日から60日以内のできるだけ早い日にすることが求められています(従業員を使う発注者の場合)</span></label>
+        <label class="field">支払方法<input type="text" name="payMethod" value="銀行振込(振込手数料は当社負担)" /></label>
+        <label class="field">経費(交通費など)の扱い<input type="text" name="expenses" placeholder="例: 報酬に含む / 実費を別途精算" /></label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>揉めやすいところ</legend>
+      <div class="row-2">
+        <label class="field">修正の回数<input type="text" name="revisions" value="2回まで(3回目以降は別途お見積り)" /></label>
+        <label class="field">修正の範囲<input type="text" name="revisionScope" placeholder="例: 構成の大きな変更は含まない" /></label>
+        <label class="field">著作権・使ってよい範囲<input type="text" name="rights" placeholder="例: 納品物の著作権は報酬の支払いをもって当社に譲渡" /></label>
+        <label class="field">制作実績としての公開<input type="text" name="portfolio" placeholder="例: 公開後であれば可" /></label>
+        <label class="field">秘密情報の扱い<input type="text" name="nda" placeholder="例: 別途NDAを締結 / 本メールの内容を秘密として扱う" /></label>
+      </div>
+      <label class="field">参考資料・イメージ<textarea name="references" placeholder="例: 参考動画のURL、トンマナ資料"></textarea></label>
+    </fieldset>
+  </form>
+
+  <div class="result">
+    <h2 style="margin-top:0">明示事項の確認</h2>
+    <ul id="brief-check" class="small"></ul>
+    <p class="small muted">これは入力漏れの確認であり、法律に適合しているかの判定ではありません。</p>
+    <h2>発注メールの下書き</h2>
+    <textarea id="brief-output" readonly style="min-height:420px;font-size:14px"></textarea>
+    <p class="no-print" style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" type="button" id="brief-copy">コピーする</button>
+      <button class="btn btn-outline" type="button" id="brief-clear">入力を消去</button>
+    </p>
+  </div>
+
+  <script>
+    const KEY = "hacchu-os:brief";
+    const form = document.getElementById("brief-form") as HTMLFormElement;
+    const output = document.getElementById("brief-output") as HTMLTextAreaElement;
+    const check = document.getElementById("brief-check")!;
+
+    const fields = () =>
+      Object.fromEntries(
+        Array.from(form.elements)
+          .filter((el): el is HTMLInputElement => "name" in el && Boolean((el as HTMLInputElement).name))
+          .map((el) => [el.name, el.value.trim()]),
+      ) as Record<string, string>;
+
+    const jpDate = (s: string) => {
+      if (!s) return "";
+      const [y, m, d] = s.split("-").map(Number);
+      return `${y}年${m}月${d}日`;
+    };
+
+    // フリーランス法で明示が必要とされる事項(公取委の資料による。支払方法は現金以外の場合など)
+    const required: [string, string, (f: Record<string, string>) => boolean][] = [
+      ["発注者・受注者の名称", "client", (f) => Boolean(f.client && f.vendor)],
+      ["業務委託をした日", "orderDate", (f) => Boolean(f.orderDate)],
+      ["給付(成果物・作業)の内容", "deliverable", (f) => Boolean(f.deliverable)],
+      ["給付を受け取る期日", "dueDate", (f) => Boolean(f.dueDate)],
+      ["給付を受け取る場所", "deliveryPlace", (f) => Boolean(f.deliveryPlace)],
+      ["報酬の額", "fee", (f) => Boolean(f.fee)],
+      ["支払期日", "payDate", (f) => Boolean(f.payDate)],
+    ];
+
+    function render() {
+      const f = fields();
+      try {
+        localStorage.setItem(KEY, JSON.stringify(f));
+      } catch {}
+
+      check.innerHTML =
+        required.map(([label, , ok]) => `<li>${ok(f) ? "✅" : "⬜"} ${label}</li>`).join("") +
+        `<li>${f.inspectionDate ? "✅" : "➖"} 検査を完了する期日(検査をする場合)</li>` +
+        `<li>${f.payMethod ? "✅" : "➖"} 支払方法(現金以外で支払う場合など)</li>`;
+
+      const fee = f.fee ? `${Number(f.fee).toLocaleString("ja-JP")}円(${f.tax})` : "[未入力]";
+      const line = (label: string, value: string) => (value ? `・${label}: ${value}\n` : "");
+
+      output.value =
+        `${f.vendor || "[相手の名前]"} 様\n\n` +
+        `お世話になっております。${f.client || "[自社名]"}の${f.clientPerson || "[担当者名]"}です。\n` +
+        `下記の内容で正式に業務をご依頼いたします。内容をご確認のうえ、お引き受けいただけるかご返信ください。\n\n` +
+        `━━━━━━━━━━━━━━━━\n` +
+        `■ 発注内容\n` +
+        line("発注者", f.client) +
+        line("受注者", f.vendor) +
+        line("業務委託日", jpDate(f.orderDate)) +
+        line("業務名", f.title) +
+        line("目的", f.purpose) +
+        line("想定する視聴者・読者", f.audience) +
+        `・成果物の内容: ${f.deliverable || "[未入力]"}\n` +
+        line("当社が用意するもの", f.materials) +
+        `\n■ 日程・納品\n` +
+        line("初稿の期日", jpDate(f.draftDate)) +
+        `・納品期日: ${jpDate(f.dueDate) || "[未入力]"}\n` +
+        `・納品方法・場所: ${f.deliveryPlace || "[未入力]"}\n` +
+        line("検査完了日", jpDate(f.inspectionDate)) +
+        `\n■ 報酬・支払い\n` +
+        `・報酬額: ${fee}\n` +
+        `・支払期日: ${jpDate(f.payDate) || "[未入力]"}\n` +
+        line("支払方法", f.payMethod) +
+        line("経費", f.expenses) +
+        `\n■ 修正・権利など\n` +
+        line("修正回数", f.revisions) +
+        line("修正の範囲", f.revisionScope) +
+        line("著作権・利用範囲", f.rights) +
+        line("制作実績としての公開", f.portfolio) +
+        line("秘密情報", f.nda) +
+        line("参考資料", f.references) +
+        `━━━━━━━━━━━━━━━━\n\n` +
+        `ご不明な点や、進め方のご提案があれば遠慮なくお知らせください。\n` +
+        `よろしくお願いいたします。\n`;
+    }
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (saved) {
+        for (const [k, v] of Object.entries(saved)) {
+          const el = form.elements.namedItem(k) as HTMLInputElement | null;
+          if (el && typeof v === "string") el.value = v;
+        }
+      }
+    } catch {}
+    const orderDate = form.elements.namedItem("orderDate") as HTMLInputElement;
+    if (!orderDate.value) orderDate.value = new Date().toISOString().slice(0, 10);
+
+    form.addEventListener("input", render);
+    document.getElementById("brief-copy")!.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(output.value);
+      } catch {
+        output.select();
+        document.execCommand("copy");
+      }
+    });
+    document.getElementById("brief-clear")!.addEventListener("click", () => {
+      form.reset();
+      try {
+        localStorage.removeItem(KEY);
+      } catch {}
+      render();
+    });
+    render();
+  </script>
+</Tool>

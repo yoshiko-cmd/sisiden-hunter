@@ -1,0 +1,18 @@
+---
+// 広告リンク。offers.json の台帳から引く。URL未登録(ASP未登録)のときはリンクを出さずサービス名だけを出す。
+import data from "../data/offers.json";
+
+interface Props {
+  id: string;
+  label?: string;
+}
+const { id, label } = Astro.props;
+const offer = data.offers.find((o) => o.id === id);
+if (!offer) throw new Error(`offers.json に id=${id} がありません`);
+const text = label ?? `${offer.name}の公式サイト`;
+---
+{offer.url ? (
+  <span><span class="pr-label">PR</span><a href={`/go/${offer.id}/`} rel="sponsored nofollow noopener" target="_blank">{text}</a></span>
+) : (
+  <span>{offer.name}</span>
+)}

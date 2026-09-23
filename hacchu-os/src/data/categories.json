@@ -1,0 +1,85 @@
+[
+  {
+    "slug": "find",
+    "name": "外注先を探す",
+    "description": "制作会社・フリーランス・クラウドソーシング・エージェント・知人紹介。依頼先の種類と探し方。",
+    "children": [
+      { "slug": "video", "name": "映像・動画" },
+      { "slug": "web", "name": "Web" },
+      { "slug": "design", "name": "デザイン" },
+      { "slug": "sns", "name": "SNS" },
+      { "slug": "writing", "name": "ライティング" },
+      { "slug": "pr", "name": "広報・PR" },
+      { "slug": "sales", "name": "営業" },
+      { "slug": "engineer", "name": "エンジニア" },
+      { "slug": "accounting", "name": "経理" },
+      { "slug": "other", "name": "その他" }
+    ]
+  },
+  {
+    "slug": "select",
+    "name": "選び方",
+    "description": "ポートフォリオの見方、面談の質問、見積の比べ方、トライアル発注。",
+    "children": [
+      { "slug": "portfolio", "name": "ポートフォリオ" },
+      { "slug": "interview", "name": "面談" },
+      { "slug": "quote", "name": "見積" },
+      { "slug": "trial", "name": "トライアル" },
+      { "slug": "compare", "name": "比較" }
+    ]
+  },
+  {
+    "slug": "contract",
+    "name": "発注・契約",
+    "description": "発注書、業務委託契約、NDA、フリーランス法、著作権などの知的財産。",
+    "children": [
+      { "slug": "purchase-order", "name": "発注書" },
+      { "slug": "outsourcing-contract", "name": "業務委託" },
+      { "slug": "nda", "name": "NDA" },
+      { "slug": "freelance-act", "name": "フリーランス法" },
+      { "slug": "ip", "name": "知的財産" }
+    ]
+  },
+  {
+    "slug": "manage",
+    "name": "プロジェクト管理",
+    "description": "キックオフ、進行管理、修正指示、納期遅延や連絡が取れないときの対応。",
+    "children": []
+  },
+  {
+    "slug": "payment",
+    "name": "支払い・会計",
+    "description": "支払期日、請求書の受け取り、源泉徴収、インボイス。",
+    "children": []
+  },
+  {
+    "slug": "tools-compare",
+    "name": "ツール比較",
+    "description": "電子契約・会計・請求・業務委託管理・プロジェクト管理を、小さな会社の発注者の目線で比べます。",
+    "children": [
+      { "slug": "e-contract", "name": "電子契約" },
+      { "slug": "accounting-saas", "name": "会計" },
+      { "slug": "invoice", "name": "請求" },
+      { "slug": "freelance-management", "name": "業務委託管理" },
+      { "slug": "project-management", "name": "プロジェクト管理" }
+    ]
+  },
+  {
+    "slug": "failures",
+    "name": "外注失敗事例",
+    "description": "実際にあった外注の失敗と、発注時点で防ぐ方法。",
+    "children": []
+  },
+  {
+    "slug": "client-interviews",
+    "name": "発注者インタビュー",
+    "description": "外注を使いこなしている発注者に、選び方と進め方を聞きます。",
+    "children": []
+  },
+  {
+    "slug": "freelancer-interviews",
+    "name": "フリーランスインタビュー",
+    "description": "受注する側から見た「仕事をしやすい発注者」。",
+    "children": []
+  }
+]

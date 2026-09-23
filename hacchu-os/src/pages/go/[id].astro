@@ -1,0 +1,21 @@
+---
+// 広告リンクのリダイレクト(クリック計測の入口)。URL登録済みのオファーだけページを作る。
+import data from "../../data/offers.json";
+
+export function getStaticPaths() {
+  return data.offers.filter((o) => o.url).map((offer) => ({ params: { id: offer.id }, props: { offer } }));
+}
+const { offer } = Astro.props;
+---
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="refresh" content={`0; url=${offer.url}`} />
+    <title>{offer.name}へ移動します</title>
+  </head>
+  <body>
+    <p><span>PR</span> {offer.name}の公式サイトへ移動します。移動しない場合は<a href={offer.url} rel="sponsored nofollow noopener">こちら</a>。</p>
+  </body>
+</html>

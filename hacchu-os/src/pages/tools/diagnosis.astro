@@ -1,0 +1,164 @@
+---
+import Tool from "../../layouts/Tool.astro";
+
+type Key = "agency" | "freelance" | "crowd" | "agent" | "referral";
+const questions: { q: string; options: { label: string; add: Partial<Record<Key, number>> }[] }[] = [
+  {
+    q: "1件あたりの予算はどのくらいですか?",
+    options: [
+      { label: "5万円未満", add: { crowd: 3, freelance: 1, referral: 1 } },
+      { label: "5万〜30万円", add: { freelance: 3, crowd: 1, referral: 1 } },
+      { label: "30万〜100万円", add: { freelance: 2, agency: 2 } },
+      { label: "100万円以上", add: { agency: 3, agent: 1 } },
+    ],
+  },
+  {
+    q: "社内に、外注先への指示・確認・スケジュール管理ができる人はいますか?",
+    options: [
+      { label: "いる(時間も取れる)", add: { freelance: 2, crowd: 2, referral: 1 } },
+      { label: "いるが、あまり時間は取れない", add: { agency: 1, freelance: 1, agent: 1 } },
+      { label: "いない", add: { agency: 3, agent: 1 } },
+    ],
+  },
+  {
+    q: "どのくらいの頻度で頼みますか?",
+    options: [
+      { label: "今回だけ", add: { crowd: 2, agency: 1, freelance: 1 } },
+      { label: "月に何回か・定期的に", add: { freelance: 3, agent: 1, referral: 1 } },
+      { label: "チームの一員のように長期間", add: { agent: 3, freelance: 1 } },
+    ],
+  },
+  {
+    q: "いつまでに必要ですか?",
+    options: [
+      { label: "2週間以内", add: { crowd: 1, agency: 1, referral: 1 } },
+      { label: "1〜2か月後", add: { freelance: 1, agency: 1 } },
+      { label: "急いでいない", add: { freelance: 2 } },
+    ],
+  },
+  {
+    q: "成果物はどこで使いますか?",
+    options: [
+      { label: "会社の顔になる(Webサイト・会社紹介・採用など)", add: { agency: 2, freelance: 1 } },
+      { label: "SNSなどで量を出したい", add: { freelance: 2, crowd: 1 } },
+      { label: "社内向け・まず試したい", add: { crowd: 2, referral: 1 } },
+    ],
+  },
+  {
+    q: "候補者の作品を見たり、面談したりする時間は取れますか?",
+    options: [
+      { label: "取れる", add: { freelance: 2, crowd: 1 } },
+      { label: "あまり取れない", add: { agency: 2, agent: 2, referral: 1 } },
+    ],
+  },
+  {
+    q: "その分野の人を紹介してくれる、信頼できる知人はいますか?",
+    options: [
+      { label: "いる", add: { referral: 3 } },
+      { label: "いない", add: {} },
+    ],
+  },
+  {
+    q: "頼みたい仕事の種類は?",
+    options: [
+      { label: "映像・デザイン・Web", add: { freelance: 1, agency: 1 } },
+      { label: "ライティング・SNS投稿", add: { crowd: 1, freelance: 1 } },
+      { label: "システム開発・エンジニア", add: { agent: 2, agency: 1 } },
+      { label: "広報・営業・経理など", add: { agent: 1, freelance: 1 } },
+    ],
+  },
+];
+
+const results: Record<Key, { name: string; fit: string; caution: string; next: { label: string; href: string }[] }> = {
+  agency: {
+    name: "制作会社・専門会社",
+    fit: "進行管理まで任せたい、社外に出る大事な成果物、予算に余裕がある場合に向いています。",
+    caution: "同じ内容でも会社によって見積の幅が大きくなりがちです。内訳と、実際に担当する人を確認しましょう。",
+    next: [
+      { label: "制作会社とフリーランス、どっちに頼む?", href: "/articles/company-vs-freelance/" },
+      { label: "外注費シミュレーター", href: "/tools/cost-simulator/" },
+    ],
+  },
+  freelance: {
+    name: "フリーランス(個人)に直接",
+    fit: "社内で進行管理ができ、継続的に頼みたい場合に向いています。相性の良い人が見つかると、頼むたびに速く・楽になります。",
+    caution: "探す・見極める手間がかかります。面談の質問を用意し、発注内容を書面・メールで明示しましょう。",
+    next: [
+      { label: "フリーランス面談で聞く質問リスト", href: "/articles/interview-questions/" },
+      { label: "面談スコアシート", href: "/tools/interview-scoresheet/" },
+    ],
+  },
+  crowd: {
+    name: "クラウドソーシング・スキルマーケット",
+    fit: "予算が小さい、単発、まず試したい場合に向いています。募集から契約・支払いまでをサービスの中で進められます。",
+    caution: "応募者の質の幅が大きいので、募集文で成果物・修正回数・納期を具体的に書くことが大切です。手数料の有無は各サービスの公式情報で確認してください。",
+    next: [
+      { label: "発注内容整理ジェネレーター(募集文の下書きにも)", href: "/tools/brief-generator/" },
+      { label: "修正回数で揉めない発注の書き方", href: "/articles/revision-rules/" },
+    ],
+  },
+  agent: {
+    name: "エージェント(仲介会社)",
+    fit: "エンジニアなど長期で稼働してもらう人を、見極めの手間を減らして探したい場合に向いています。",
+    caution: "直接頼むより費用は上がるのが一般的です。契約の形(請負か準委任か)と、誰が何に責任を持つかを確認しましょう。",
+    next: [{ label: "外注費シミュレーター", href: "/tools/cost-simulator/" }],
+  },
+  referral: {
+    name: "知人からの紹介",
+    fit: "信頼できる紹介者がいて、急いでいる場合に向いています。人柄や仕事ぶりの情報を事前に聞けます。",
+    caution: "関係性があるぶん条件の話をあいまいにしがちです。紹介でも、発注内容・報酬・支払期日は書面・メールで明示しましょう。",
+    next: [
+      { label: "発注書に必要な項目とメール文面", href: "/articles/purchase-order-items/" },
+      { label: "発注前チェックリスト", href: "/tools/checklist/" },
+    ],
+  },
+};
+---
+<Tool slug="diagnosis">
+  <p>8つの質問に答えると、今回の仕事に合う頼み方を順番に表示します。結果は目安です。</p>
+
+  <form id="dx-form" class="form-grid" onsubmit="return false">
+    {questions.map((qu, qi) => (
+      <fieldset>
+        <legend>{qu.q}</legend>
+        {qu.options.map((o, oi) => (
+          <label style="display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:0.95rem">
+            <input type="radio" name={`q${qi}`} value={oi} style="margin-top:6px" />
+            <span>{o.label}</span>
+          </label>
+        ))}
+      </fieldset>
+    ))}
+    <button class="btn" type="submit" id="dx-submit">結果を見る</button>
+  </form>
+
+  <div id="dx-result" aria-live="polite"></div>
+
+  <script define:vars={{ questions, results }}>
+    const form = document.getElementById("dx-form");
+    const out = document.getElementById("dx-result");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const score = { agency: 0, freelance: 0, crowd: 0, agent: 0, referral: 0 };
+      let answered = 0;
+      questions.forEach((qu, qi) => {
+        const checked = form.querySelector(`input[name=q${qi}]:checked`);
+        if (!checked) return;
+        answered++;
+        for (const [k, v] of Object.entries(qu.options[Number(checked.value)].add)) score[k] += v;
+      });
+      if (answered < questions.length) {
+        out.innerHTML = `<p class="box box-warn">あと${questions.length - answered}問、答えてください。</p>`;
+        return;
+      }
+      const ranked = Object.entries(score).sort((a, b) => b[1] - a[1]);
+      const top = results[ranked[0][0]];
+      out.innerHTML =
+        `<div class="result"><p class="small muted">いちばん合いそうな頼み方</p><h2 style="margin-top:0">${top.name}</h2>` +
+        `<p>${top.fit}</p><p class="small"><strong>注意点:</strong> ${top.caution}</p>` +
+        `<p><strong>次にやること</strong></p><ul>${top.next.map((n) => `<li><a href="${n.href}">${n.label}</a></li>`).join("")}</ul>` +
+        `<p class="small muted">そのほかの候補: ${ranked.slice(1, 3).map(([k]) => results[k].name).join(" / ")}</p></div>`;
+      out.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  </script>
+</Tool>
