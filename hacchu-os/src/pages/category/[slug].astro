@@ -1,4 +1,5 @@
 ---
+import ArticleCard from "../../components/ArticleCard.astro";
 import Base from "../../layouts/Base.astro";
 import categories from "../../data/categories.json";
 import { getArticles, type Article } from "../../lib/content";
@@ -34,10 +35,7 @@ const unsorted = articles.filter((a) => !a.data.subcategory || !category.childre
     {unsorted.length > 0 && (
       <div class="cards">
         {unsorted.map((a) => (
-          <a class="card" href={`/articles/${a.id}/`}>
-            <h3>{a.data.title}</h3>
-            <p>{a.data.description}</p>
-          </a>
+          <ArticleCard article={a} />
         ))}
       </div>
     )}
@@ -48,10 +46,7 @@ const unsorted = articles.filter((a) => !a.data.subcategory || !category.childre
         {bySub(c.slug).length ? (
           <div class="cards">
             {bySub(c.slug).map((a) => (
-              <a class="card" href={`/articles/${a.id}/`}>
-                <h3>{a.data.title}</h3>
-                <p>{a.data.description}</p>
-              </a>
+              <ArticleCard article={a} />
             ))}
           </div>
         ) : (

@@ -8,6 +8,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const articleDir = join(root, "src/content/articles");
 const toolDir = join(root, "src/pages/tools");
 const categories = JSON.parse(readFileSync(join(root, "src/data/categories.json"), "utf8"));
+const offers = JSON.parse(readFileSync(join(root, "src/data/offers.json"), "utf8")).offers;
 
 // 断定・誇大・体験の捏造につながりやすい表現
 const banned = [
@@ -60,8 +61,11 @@ for (const slug of slugs) {
   if (fm.summary && fm.summary.length < 40) warn("冒頭の結論(summary)が短い");
 
   // 広告表示
-  const usesOffer = /<OfferLink\b/.test(body);
-  if (usesOffer && fm.hasAds !== "true") err("広告リンクがあるのに hasAds: true がない(広告表示が出ない)");
+  // URL登録済み(=実際に広告リンクになる)のオファーを使う記事は、hasAds: true が必須
+  const offerIds = [...body.matchAll(/<OfferLink\s+id="([^"]+)"/g)].map((m) => m[1]);
+  for (const id of offerIds) if (!offers.some((o) => o.id === id)) err(`offers.json に無いオファー: ${id}`);
+  const liveAds = offerIds.filter((id) => offers.find((o) => o.id === id)?.url);
+  if (liveAds.length && fm.hasAds !== "true") err(`広告リンク(${liveAds.join(", ")})があるのに hasAds: true がない(広告表示が出ない)`);
   if (/rel="sponsored/.test(body)) err("広告リンクは OfferLink コンポーネント経由にする(PR表示のため)");
 
   // 法務・税務

@@ -1,0 +1,16 @@
+---
+import type { Article } from "../lib/content";
+import categories from "../data/categories.json";
+interface Props {
+  article: Article;
+  showCategory?: boolean;
+}
+const { article, showCategory = false } = Astro.props;
+const cat = categories.find((c) => c.slug === article.data.category);
+---
+<a class="card" href={`/articles/${article.id}/`}>
+  {showCategory && cat && <span class="tag">{cat.name}</span>}
+  {article.data.hasAds && <span class="tag tag-ad">広告を含む</span>}
+  <h3>{article.data.title}</h3>
+  <p>{article.data.description}</p>
+</a>

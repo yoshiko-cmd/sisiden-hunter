@@ -1,4 +1,5 @@
 ---
+import ArticleCard from "../components/ArticleCard.astro";
 import Base from "../layouts/Base.astro";
 import Newsletter from "../components/Newsletter.astro";
 import site from "../data/site.json";
@@ -7,7 +8,7 @@ import { getArticles, tools } from "../lib/content";
 
 const articles = await getArticles();
 const steps = ["探す", "比較する", "面談する", "選ぶ", "契約する", "発注する", "進行管理する", "納品", "支払う", "評価する", "継続/終了"];
-const featured = ["company-vs-freelance", "interview-questions", "freelance-act-for-clients", "purchase-order-items", "revision-rules"]
+const featured = ["how-to-find-video-creators", "company-vs-freelance", "interview-questions", "freelance-act-for-clients", "purchase-order-items", "quote-comparison"]
   .map((id) => articles.find((a) => a.id === id))
   .filter((a) => a !== undefined);
 ---
@@ -28,11 +29,7 @@ const featured = ["company-vs-freelance", "interview-questions", "freelance-act-
     <h2>まず読む</h2>
     <div class="cards">
       {featured.map((a) => (
-        <a class="card" href={`/articles/${a.id}/`}>
-          <span class="tag">{categories.find((c) => c.slug === a.data.category)?.name}</span>
-          <h3>{a.data.title}</h3>
-          <p>{a.data.description}</p>
-        </a>
+        <ArticleCard article={a} showCategory />
       ))}
     </div>
   </section>
